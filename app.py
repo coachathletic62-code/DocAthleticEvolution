@@ -15,7 +15,6 @@ if 'page' not in st.session_state:
 # STUFE 1: Splash-Screen (Schwarzer Hintergrund & Logo / Ellipsen)
 # -----------------------------------------------------------------
 if st.session_state.page == 'splash':
-    # CSS für den schwarzen Hintergrund auf der Startseite
     st.markdown(
         """
         <style>
@@ -51,24 +50,21 @@ elif st.session_state.page == 'overview':
     st.subheader("System- und Makrozyklus-Übersicht")
     st.markdown("---")
     
-    # Integriertes Übersichtsbild der Trainingskomplexe
+    # Exaktes Übersichtsbild einbinden
     try:
         st.image("uebersicht.jpg", use_container_width=True)
     except Exception:
-        st.warning("Übersichtsbild uebersicht.jpg konnte nicht geladen werden.")
+        st.warning("Bild uebersicht.jpg konnte nicht geladen werden.")
         
-    st.markdown("### 📊 Komplex-Training & Altersklassen-Struktur")
-    st.write("Die Plattform basiert ausnahmslos auf der Doc Athletic Train Smart Philosophie zur Steuerung der biologischen und mechanischen Systeme.")
+    st.markdown("### 📊 Trainingskomplexe & Leistungsstruktur")
+    st.write("Die Plattform basiert ausnahmslos auf der Doc Athletic Train Smart Philosophie.")
     
-    # Auswahl der Altersklasse
     altersklasse = st.selectbox(
         "Zielgruppe / Altersklasse wählen:",
-        ["Nachwuchsbereich (U14 - U16)", "Anschlusskader (U17 - U19)", "Hochleistungssport / Profibereich"]
+        ["U11", "U13", "U15", "U17", "U20", "U23 / Hochleistungssport"]
     )
     
     st.markdown("---")
-    st.markdown("<br>", unsafe_allow_html=True)
-    
     col_a, col_b = st.columns(2)
     with col_a:
         if st.button("← Zurück zum Logo"):
@@ -90,7 +86,6 @@ elif st.session_state.page == 'app':
     st.markdown("---")
     st.header("Operative Trainingssteuerung (v18.28)")
     
-    # Bewertungskriterien
     rpe = st.slider("SBE / RPE (Subjektives Beanspruchungsempfinden)", 1, 10, 5)
     neuro = st.selectbox("Neuromuskulärer Status", ["Optimale Ansteuerung", "Moderate Latenz", "Neuromuskuläre Ermüdung"])
     morpho = st.selectbox("Muskulärer Status", ["Hypertrophie-Fokus", "Kraftausdauer", "Maximalstärke"])
