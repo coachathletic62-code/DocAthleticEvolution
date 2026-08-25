@@ -70,12 +70,12 @@ elif st.session_state.page == 'overview':
             st.session_state.page = 'splash'
             st.rerun()
     with col_b:
-        if st.button("Zur Trainingsplanung & Dokumentation →", type="primary"):
+        if st.button("Zur Trainingsplanung & Athleten-Erfassung →", type="primary"):
             st.session_state.page = 'planning'
             st.rerun()
 
 # -----------------------------------------------------------------
-# STUFE 3: Trainingsplanung (Vorbereitung / Soll-Vorgabe)
+# STUFE 3: Trainingsplanung & Athleten-Zuordnung (Operativer Kern)
 # -----------------------------------------------------------------
 elif st.session_state.page == 'planning':
     if st.button("← Zurück zur Übersicht"):
@@ -83,14 +83,38 @@ elif st.session_state.page == 'planning':
         st.rerun()
         
     st.markdown("---")
-    st.header("Trainingsplanung & Programm-Struktur")
-    st.write("Vorbereitung der Trainingseinheit, Auswahl der Trainingsmittel und Tempotabellen.")
+    st.header("Trainingsplanung & Athleten-Erfassung")
+    st.write("Strukturierte Zuweisung nach Doc Athletic Train Smart Philosophie.")
     
-    st.info("Hier erfolgt die strukturierte Zuweisung der Übungen, Sätze, Wiederholungen und Zusatzlasten gemäß Excel-Vorgabe.")
+    # Athleten- und Strukturauswahl
+    athlet = st.selectbox(
+        "Athlet / Kader wählen:",
+        ["Ronja Borchmeyer", "Kaderathlet U17", "Kaderathlet U20", "Protokoll-Gruppe Offen"]
+    )
     
-    if st.button("Weiter zum Post-Workout Monitoring (RPE/SBE) →", type="primary"):
-        st.session_state.page = 'monitoring'
-        st.rerun()
+    trainingseinheit = st.selectbox(
+        "Trainingsmittel / Komplex:",
+        ["Front Squat Jumps", "One Leg Jumper", "Koordinative Kraft", "Explosivkraft / Speed Master"]
+    )
+    
+    col_s1, col_s2 = st.columns(2)
+    with col_s1:
+        saetze = st.number_input("Sätze", min_value=1, max_value=10, value=4)
+    with col_s2:
+        wdh = st.number_input("Wiederholungen", min_value=1, max_value=20, value=6)
+        
+    zusatzlast = st.slider("Zusatzlast / Intensität (%)", 0, 100, 75)
+    
+    st.markdown("---")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("← Zurück zur Systemübersicht"):
+            st.session_state.page = 'overview'
+            st.rerun()
+    with col_b:
+        if st.button("Weiter zum Post-Workout Monitoring (RPE) →", type="primary"):
+            st.session_state.page = 'monitoring'
+            st.rerun()
 
 # -----------------------------------------------------------------
 # STUFE 4: Post-Workout Monitoring (Operative Erfassung / RPE)
@@ -108,5 +132,5 @@ elif st.session_state.page == 'monitoring':
     neuro = st.selectbox("Neuromuskulärer Status", ["Optimale Ansteuerung", "Moderate Latenz", "Neuromuskuläre Ermüdung"])
     morpho = st.selectbox("Muskulärer Status", ["Hypertrophie-Fokus", "Kraftausdauer", "Maximalstärke"])
     
-    if st.button("Datensatz abschließend speichern"):
-        st.success(f"Trainingseinheit dokumentiert. SBE/RPE: {rpe} | Status: {neuro} / {morpho}")
+    if st.button("Datensatz abschließend dokumentieren"):
+        st.success(f"Datensatz für Athleten erfasst. SBE/RPE: {rpe} | Status: {neuro} / {morpho}")
