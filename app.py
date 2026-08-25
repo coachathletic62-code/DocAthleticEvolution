@@ -37,10 +37,10 @@ elif st.session_state.page == 'app':
     st.markdown("---")
     st.header("Operative Trainingssteuerung (v18.28)")
     
-    # Bewertungskriterien
-    rpe = st.slider("Beanspruchungsempfinden (RPE)", 1, 10, 5)
+    # Bewertungskriterien mit angepasster internationaler Nomenklatur
+    rpe = st.slider("SBE / RPE (Subjektives Beanspruchungsempfinden)", 1, 10, 5)
     neuro = st.selectbox("Neuromuskulärer Status", ["Optimale Ansteuerung", "Moderate Latenz", "Neuromuskuläre Ermüdung"])
     morpho = st.selectbox("Muskulärer Status", ["Hypertrophie-Fokus", "Kraftausdauer", "Maximalstärke"])
     
     if st.button("Daten berechnen und dokumentieren"):
-        st.success(f"Datensatz erfasst. RPE: {rpe} | Status: {neuro} / {morpho}")
+        st.success(f"Datensatz erfasst. SBE/RPE: {rpe} | Status: {neuro} / {morpho}")
