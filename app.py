@@ -7,12 +7,12 @@ st.set_page_config(
     layout="centered"
 )
 
-# Zustandsverwaltung für die 3-stufige Navigation
+# Zustandsverwaltung für die Navigation
 if 'page' not in st.session_state:
     st.session_state.page = 'splash'
 
 # -----------------------------------------------------------------
-# STUFE 1: Splash-Screen (Schwarzer Hintergrund & Logo / Ellipsen)
+# STUFE 1: Splash-Screen (Schwarzer Hintergrund & Logo)
 # -----------------------------------------------------------------
 if st.session_state.page == 'splash':
     st.markdown(
@@ -43,21 +43,20 @@ if st.session_state.page == 'splash':
             st.rerun()
 
 # -----------------------------------------------------------------
-# STUFE 2: Übersicht & Altersklassen-Differenzierung (Komplex-Training)
+# STUFE 2: System- und Makrozyklus-Übersicht (Komplexe & Altersklassen)
 # -----------------------------------------------------------------
 elif st.session_state.page == 'overview':
     st.title("Doc Athletic Evolution")
     st.subheader("System- und Makrozyklus-Übersicht")
     st.markdown("---")
     
-    # Exaktes Übersichtsbild einbinden
     try:
         st.image("uebersicht.jpg", use_container_width=True)
     except Exception:
         st.warning("Bild uebersicht.jpg konnte nicht geladen werden.")
         
     st.markdown("### 📊 Trainingskomplexe & Leistungsstruktur")
-    st.write("Die Plattform basiert ausnahmslos auf der Doc Athletic Train Smart Philosophie.")
+    st.write("Die Plattform basiert ausnahmslos auf der Doc Athletic Train Smart Philosophie zur Steuerung der biologischen und mechanischen Systeme.")
     
     altersklasse = st.selectbox(
         "Zielgruppe / Altersklasse wählen:",
@@ -71,24 +70,43 @@ elif st.session_state.page == 'overview':
             st.session_state.page = 'splash'
             st.rerun()
     with col_b:
-        if st.button("Zur operativen Steuerung →", type="primary"):
-            st.session_state.page = 'app'
+        if st.button("Zur Trainingsplanung & Dokumentation →", type="primary"):
+            st.session_state.page = 'planning'
             st.rerun()
 
 # -----------------------------------------------------------------
-# STUFE 3: Operative Trainingssteuerung
+# STUFE 3: Trainingsplanung (Vorbereitung / Soll-Vorgabe)
 # -----------------------------------------------------------------
-elif st.session_state.page == 'app':
+elif st.session_state.page == 'planning':
     if st.button("← Zurück zur Übersicht"):
         st.session_state.page = 'overview'
         st.rerun()
         
     st.markdown("---")
-    st.header("Operative Trainingssteuerung (v18.28)")
+    st.header("Trainingsplanung & Programm-Struktur")
+    st.write("Vorbereitung der Trainingseinheit, Auswahl der Trainingsmittel und Tempotabellen.")
+    
+    st.info("Hier erfolgt die strukturierte Zuweisung der Übungen, Sätze, Wiederholungen und Zusatzlasten gemäß Excel-Vorgabe.")
+    
+    if st.button("Weiter zum Post-Workout Monitoring (RPE/SBE) →", type="primary"):
+        st.session_state.page = 'monitoring'
+        st.rerun()
+
+# -----------------------------------------------------------------
+# STUFE 4: Post-Workout Monitoring (Operative Erfassung / RPE)
+# -----------------------------------------------------------------
+elif st.session_state.page == 'monitoring':
+    if st.button("← Zurück zur Trainingsplanung"):
+        st.session_state.page = 'planning'
+        st.rerun()
+        
+    st.markdown("---")
+    st.header("Post-Workout Monitoring (Operative Erfassung)")
+    st.write("Nachträgliche Bewertung und Dokumentation nach Abschluss der Belastung.")
     
     rpe = st.slider("SBE / RPE (Subjektives Beanspruchungsempfinden)", 1, 10, 5)
     neuro = st.selectbox("Neuromuskulärer Status", ["Optimale Ansteuerung", "Moderate Latenz", "Neuromuskuläre Ermüdung"])
     morpho = st.selectbox("Muskulärer Status", ["Hypertrophie-Fokus", "Kraftausdauer", "Maximalstärke"])
     
-    if st.button("Daten berechnen und dokumentieren"):
-        st.success(f"Datensatz erfasst. SBE/RPE: {rpe} | Status: {neuro} / {morpho}")
+    if st.button("Datensatz abschließend speichern"):
+        st.success(f"Trainingseinheit dokumentiert. SBE/RPE: {rpe} | Status: {neuro} / {morpho}")
