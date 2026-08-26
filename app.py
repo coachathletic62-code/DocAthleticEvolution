@@ -1,7 +1,7 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.35)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.37)
 # Architektur: 3-Stufig (Start -> Übersicht -> Operative Matrix)
-# Engine: Kader-Update, Weibliche Laktat-Kompensation, Einzel-Print
+# Engine: Exakte Korrelation (Diagnostik -> Tempotabelle) & Print-Befehl
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -12,51 +12,48 @@ st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_s
 
 st.markdown("""
 <style>
-    /* Basis-Design und Kontrast-Korrektur */
     .stApp { background-color: #000000; color: #ffffff; }
     h1, h2, h3, h4, h5, h6, p, label { color: #ffffff !important; }
     
-    /* Fix: Weißer Fleck auf Logo (Streamlit Fullscreen Button entfernen) */
     button[title="View fullscreen"] { display: none !important; }
     
-    /* Dropdown und Input Kontrast (Schwarz auf Weiß) */
-    .stSelectbox > div > div, .stTextInput > div > div > input {
+    .stSelectbox > div > div, .stTextInput > div > div > input, .stNumberInput > div > div > input {
         background-color: #ffffff !important;
         color: #000000 !important;
     }
     
-    /* Buttons */
     .stButton>button {
         background-color: #1f2833; color: #66fcf1;
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
     
-    /* Steuerungsmatrix */
+    .druck-btn {
+        background-color: #ea580c; color: #ffffff; border: none; padding: 12px 20px;
+        font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
+        width: 100%; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase;
+    }
+    .druck-btn:hover { background-color: #c2410c; }
+    
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
     }
     
-    /* Druckansicht-Tabelle */
     .druck-tabelle {
         width: 100%; border-collapse: collapse; margin-top: 10px;
-        font-family: Arial, sans-serif; font-size: 14px;
-        color: #ffffff;
+        font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;
     }
     .druck-tabelle th {
         background-color: #1f2833; color: #66fcf1 !important;
         border: 1px solid #45a29e; padding: 10px; text-align: left;
     }
-    .druck-tabelle td {
-        border: 1px solid #333333; padding: 8px;
-    }
+    .druck-tabelle td { border: 1px solid #333333; padding: 8px; }
     .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
 
-    /* CSS für sauberen Ausdruck (Strg+P) */
     @media print {
-        .stButton, .stSelectbox, .stTextInput, header, footer { display: none !important; }
+        .stButton, .stSelectbox, .stTextInput, .stNumberInput, .druck-btn, header, footer { display: none !important; }
         .stApp { background-color: white !important; }
         h1, h2, h3, h4, h5, h6, p, td { color: black !important; }
         .druck-tabelle th { background-color: #dddddd !important; color: black !important; border: 1px solid black; }
@@ -73,7 +70,7 @@ if 'navigations_status' not in st.session_state:
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
 
-# 3. KADER-DATENBANK & PARAMETER (Update 18.35)
+# 3. KADER-DATENBANK & PARAMETER
 kader = {
     "Mathilda Karnik": {"alter": 14, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
     "Sari Saeland": {"alter": 19, "profil": "Fussball_U19_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
@@ -105,13 +102,11 @@ def ermittle_basis_50m(profil, ft, reife):
     if "U11" in profil: basis = 7.7 if "_m" in profil else 8.2
     elif "U13" in profil: basis = 7.1 if "_m" in profil else 7.6
     elif "U15_m" in profil: basis = 6.2
-    elif "U15_w" in profil: basis = 7.0
+    elif "U15_w" in profil: basis = 6.8
     elif "U17_m" in profil: basis = 5.8
-    elif "U17_w" in profil: basis = 6.8
+    elif "U17_w" in profil: basis = 6.5
     elif "U19_m" in profil or "U23_m" in profil: basis = 5.5
-    elif "U19_w" in profil or "U23_w" in profil: basis = 6.6
-    elif "Basketball" in profil: basis = 6.0 if "_m" in profil else 6.6
-    elif "Leichtathletik" in profil: basis = 5.6 if "_m" in profil else 6.3
+    elif "U19_w" in profil or "U23_w" in profil: basis = 6.3
     else: basis = 6.6
 
     if ft == "Schnelligkeit (Sprint)": basis -= 0.2
@@ -137,7 +132,6 @@ if st.session_state.navigations_status == 'Start':
             st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden.</div>", unsafe_allow_html=True)
             
     st.markdown("<br><br>", unsafe_allow_html=True)
-    
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
@@ -178,7 +172,6 @@ elif st.session_state.navigations_status == 'Operativ':
     with col_top2:
         st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
-    # HORIZONTALE STEUERUNGSMATRIX
     st.markdown("<div class='steuermatrix'>", unsafe_allow_html=True)
     st.markdown("### ⚙️ Biometrische Live-Steuerung")
     
@@ -197,11 +190,8 @@ elif st.session_state.navigations_status == 'Operativ':
         if ziel in kader:
             profil = kader[ziel]["profil"]
             ft = st.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
-            
             reife_val = kader[ziel]["reife"]
-            r_idx = 1
-            if "Spät" in reife_val or "Retard" in reife_val: r_idx = 0
-            if "Früh" in reife_val or "Akzeler" in reife_val: r_idx = 2
+            r_idx = 0 if "Spät" in reife_val else 2 if "Früh" in reife_val else 1
             reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx)
         else:
             profil = ziel
@@ -215,41 +205,43 @@ elif st.session_state.navigations_status == 'Operativ':
         
     st.markdown("</div>", unsafe_allow_html=True)
 
-    reife_intern = "Normalentwickler"
-    if "Spät" in reife or "Retardiert" in reife: reife_intern = "Spätentwickler"
-    if "Früh" in reife or "Akzeleriert" in reife: reife_intern = "Frühentwickler"
+    reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
 
-    basis_50m = ermittle_basis_50m(profil, ft, reife_intern)
-
-    # WEIBLICHE LAKTAT-KOMPENSATION (Reduzierte Eliminierungs-Quote)
-    komp_100 = 1.025 if "_w" in profil else 1.0  
-    komp_150 = 1.035 if "_w" in profil else 1.0  
-    komp_200 = 1.045 if "_w" in profil else 1.0  
-    komp_300 = 1.060 if "_w" in profil else 1.0  
-
-    # DIAGNOSTIK
+    # DIAGNOSTIK & KORRELATION
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
-    if "_w" in profil: st.info("⚡ Weibliche Enzym-Kompensation (Geringere Laktateliminierung bei längeren Distanzen) ist aktiv.")
+    if "_w" in profil: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.99, step=0.01)
         if t_60 > 0:
-            prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * komp_100
-            prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * komp_200
+            if "_w" in profil:
+                # Exakt kalibriert auf 7.99s -> 12.61s (Faktor 2.55 abweichend von Basis)
+                prog_100 = 12.61 + ((t_60 - 7.99) * 2.55)
+                prog_200 = 27.00 + ((t_60 - 7.99) * 5.0)
+            else:
+                prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2)))
+                prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2)))
             st.write(f"➡️ Prognose 100m: **{prog_100:.2f} s** | 200m: **{prog_200:.2f} s**")
+            
     with diag_col2:
         t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=19.50, step=0.01)
         if t_150 > 0:
-            p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * (1/komp_100)
-            p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * komp_200
-            p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * komp_300
+            if "_w" in profil:
+                p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98 
+                p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * 1.045
+                p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * 1.060
+            else:
+                p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) 
+                p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) 
+                p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2)))
             st.write(f"➡️ Prognose 100m: **{p_100:.2f} s** | 200m: **{p_200:.2f} s** | 300m: **{p_300:.2f} s**")
 
     st.markdown("---")
 
-    # TEMPOTABELLEN
-    st.subheader(f"⏱ Tempotabellen (Biometrisch & Hormonell gekoppelt: Basis {basis_50m}s)")
+    # TEMPOTABELLEN (Dynamisch aus 100m-Prognose abgeleitet)
+    live_basis_50m = prog_100 / 1.93 # Rückrechnung der 50m Basis aus der exakten 100m Live-Prognose
+    st.subheader(f"⏱ Tempotabellen (Individuell gekoppelt an Live-Prognose: Basis 50m = {live_basis_50m:.2f}s)")
     def format_time(seconds):
         if seconds >= 60:
             m = int(seconds // 60)
@@ -261,11 +253,11 @@ elif st.session_state.navigations_status == 'Operativ':
     for dist_m in [50, 100, 150, 200]:
         laktat_kompensation = 1.0
         if "_w" in profil:
-            if dist_m == 100: laktat_kompensation = komp_100
-            elif dist_m == 150: laktat_kompensation = komp_150
-            elif dist_m == 200: laktat_kompensation = komp_200
+            if dist_m == 100: laktat_kompensation = 1.025
+            elif dist_m == 150: laktat_kompensation = 1.035
+            elif dist_m == 200: laktat_kompensation = 1.045
 
-        base_s = (basis_50m * (dist_m / 50.0)) * laktat_kompensation
+        base_s = (live_basis_50m * (dist_m / 50.0)) * laktat_kompensation
         
         row = {
             "Distanz": f"{dist_m}m", 
@@ -281,10 +273,12 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
+    # DRUCK-BUTTON
+    st.markdown('<button onclick="window.print()" class="druck-btn">🖨️ Trainingsprotokoll drucken</button>', unsafe_allow_html=True)
+
     # TRAININGSPLAN GENERIERUNG
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel} ({te_wahl})")
-        st.markdown("<p style='font-size:12px; color:#94a3b8;'><i>Hinweis: Für den Direktdruck (Strg + P) ist exakt diese einzelne Einheit isoliert.</i></p>", unsafe_allow_html=True)
     else:
         st.subheader(f"📋 Operativer 14-Wochen Makrozyklus: {ziel}")
         
@@ -295,18 +289,10 @@ elif st.session_state.navigations_status == 'Operativ':
             return f"Erhöht (+15%)"
         return base_str
 
-    if ziel == "Aimie": basis_last = "12-16 kg"
-    elif "U11" in profil: basis_last = "0-1 kg"
-    elif "U13" in profil: basis_last = "2-3 kg"
-    elif "U15_w" in profil: basis_last = "3-5 kg"
-    elif "U15_m" in profil: basis_last = "4-6 kg"
-    elif "U17_w" in profil: basis_last = "5-8 kg"
-    else: basis_last = "10-12 kg"
+    basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil else "2-3 kg" if "U13" in profil else "3-5 kg" if "U15_w" in profil else "4-6 kg" if "U15_m" in profil else "5-8 kg" if "U17_w" in profil else "10-12 kg"
     basis_last = calc_last(basis_last, True)
 
-    if "U11" in profil or "U13" in profil: stangen_gewicht = "1.5 kg"
-    elif "U15" in profil: stangen_gewicht = "2.0 kg"
-    else: stangen_gewicht = "3.0 kg"
+    stangen_gewicht = "1.5 kg" if "U11" in profil or "U13" in profil else "2.0 kg" if "U15" in profil else "3.0 kg"
     stangen_gewicht = calc_last(stangen_gewicht, False)
 
     is_skisprung = "Skispringen" in profil
@@ -361,7 +347,7 @@ elif st.session_state.navigations_status == 'Operativ':
             elif woche == 14:
                 protokoll.append({"TE": f"TE {woche}", "Phase": "DIAGNOSTIK", "Trainingsmittel": "300m Parcours", "Sätze/Wdh": "Soll-Werte", "Soll-Last": "0 kg", "SBE": "SR 0", "Notiz": "Werte für nächste Periode"})
 
-    # HTML Rendering für Full-Print
+    # HTML Rendering
     df_proto = pd.DataFrame(protokoll)
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
