@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.70)
-# Architektur: 3-Stufig | Engine: Integrierter Passwortschutz (Leseschutz & Testmodus)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.71)
+# Architektur: 3-Stufig | Engine: Zwei-Stufen-Auth (Gast-Modus vs. Trainer-Vollzugriff)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -55,25 +55,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# PASSWORT-SCHutz (Mastercode definieren)
-MASTER_PASSWORT = "docathletic2026"
+# ZWEI-STUFEN-AUTHENTIFIZIERUNG
+GAST_CODE = "gast2026"
+TRAINER_CODE = "docathletic2026"
 
-if 'authentifiziert' not in st.session_state:
-    st.session_state.authentifiziert = False
+if 'auth_modus' not in st.session_state:
+    st.session_state.auth_modus = None  # Entweder "gast" oder "trainer"
 
-if not st.session_state.authentifiziert:
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 100px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Geschützter Bereich - Bitte Mastercode eingeben</p>", unsafe_allow_html=True)
+if st.session_state.auth_modus is None:
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 80px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Bitte Zugriffscode eingeben (Gast-Ansicht oder Trainer-Vollzugriff)</p>", unsafe_allow_html=True)
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     with col_p2:
-        eingabe_pw = st.text_input("Mastercode", type="password")
-        if st.button("ZUGRIFF FREISCHALTEN"):
-            if eingabe_pw == MASTER_PASSWORT:
-                st.session_state.authentifiziert = True
+        eingabe_code = st.text_input("Zugriffscode", type="password")
+        if st.button("ZUGRIFF BESTÄTIGEN"):
+            if eingabe_code == TRAINER_CODE:
+                st.session_state.auth_modus = "trainer"
+                st.rerun()
+            elif eingabe_code == GAST_CODE:
+                st.session_state.auth_modus = "gast"
                 st.rerun()
             else:
-                st.error("Falscher Code. Zugriff verweigert.")
+                st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
 if 'navigations_status' not in st.session_state:
@@ -127,6 +131,9 @@ abc_parameter = {
     "Hochleistung_m": {"sets": 6, "start_m": 30.0, "step_m": 3.0, "sbe_ziel": "SR 0"},
     "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
+
+if st.session_state.auth_modus == "gast":
+    st.sidebar.warning("🔒 GAST-MODUS (Nur Leserechte, beschränkt auf TE 1 & TE 2)")
 
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
@@ -187,33 +194,35 @@ elif st.session_state.navigations_status == 'Operativ':
             aktuelle_daten = {"alter": 18, "groesse": 1.70, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 8.00}
             
     with c2:
-        alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]))
-        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten["groesse"]), step=0.01)
+        alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]), disabled=(st.session_state.auth_modus == "gast"))
+        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten["groesse"]), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
 
     with c3:
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
         reife_liste = ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]
         
         ft_idx = ft_liste.index(aktuelle_daten["fasertyp"]) if aktuelle_daten["fasertyp"] in ft_liste else 4
-        ft = st.selectbox("Fasertyp", ft_liste, index=ft_idx)
+        ft = st.selectbox("Fasertyp", ft_liste, index=ft_idx, disabled=(st.session_state.auth_modus == "gast"))
         
         reife_val = aktuelle_daten["reife"]
         r_idx = 0 if "Spät" in reife_val else 2 if "Früh" in reife_val else 1
-        reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx)
+        reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, disabled=(st.session_state.auth_modus == "gast"))
             
     with c4:
-        te_wahl = st.selectbox("Trainingseinheit (TE)", [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"])
-        sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"])
+        # Gast sieht nur TE 1 und TE 2
+        te_auswahl_liste = [f"TE {i}" for i in range(1, 3)] if st.session_state.auth_modus == "gast" else [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"]
+        te_wahl = st.selectbox("Trainingseinheit (TE)", te_auswahl_liste)
+        sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
-        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01)
+        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
     auto_150 = round(t_60 * 2.375, 2)
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01)
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
 
-    if modus == "Einzelathlet / Einzelathletin":
+    if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         col_bs1, col_bs2 = st.columns(2)
         with col_bs1:
             if st.button("💾 Athleten-Profil & Bestzeiten permanent speichern"):
@@ -237,41 +246,42 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
-        neu_name = st.text_input("Vollständiger Name")
-        nc1, nc2, nc3 = st.columns(3)
-        with nc1:
-            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=15, key="n_alt")
-            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
-        with nc2:
-            neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
-            neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft", index=4)
-        with nc3:
-            neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei", index=1)
-            neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
-            
-        nc_z1, nc_z2 = st.columns(2)
-        with nc_z1:
-            neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
-        with nc_z2:
-            neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
-            
-        if st.button("Athlet anlegen & in Datenbank verankern"):
-            if neu_name.strip():
-                st.session_state.kader_db[neu_name.strip()] = {
-                    "alter": int(alter),
-                    "groesse": float(groesse),
-                    "profil": neu_profil,
-                    "fasertyp": neu_ft,
-                    "reife": reife,
-                    "sbe": sbe_ziel,
-                    "t_60": float(neu_t60),
-                    "t_150": float(neu_t150)
-                }
-                st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
-                st.rerun()
-            else:
-                st.error("Bitte einen gültigen Namen eingeben.")
+    if st.session_state.auth_modus == "trainer":
+        with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
+            neu_name = st.text_input("Vollständiger Name")
+            nc1, nc2, nc3 = st.columns(3)
+            with nc1:
+                neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=15, key="n_alt")
+                neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
+            with nc2:
+                neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
+                neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft", index=4)
+            with nc3:
+                neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei", index=1)
+                neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
+                
+            nc_z1, nc_z2 = st.columns(2)
+            with nc_z1:
+                neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
+            with nc_z2:
+                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
+                
+            if st.button("Athlet anlegen & in Datenbank verankern"):
+                if neu_name.strip():
+                    st.session_state.kader_db[neu_name.strip()] = {
+                        "alter": int(alter),
+                        "groesse": float(groesse),
+                        "profil": profil_soll,
+                        "fasertyp": ft,
+                        "reife": reife,
+                        "sbe": sbe_ziel,
+                        "t_60": float(neu_t60),
+                        "t_150": float(neu_t150)
+                    }
+                    st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
+                    st.rerun()
+                else:
+                    st.error("Bitte einen gültigen Namen eingeben.")
 
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
 
@@ -356,7 +366,7 @@ elif st.session_state.navigations_status == 'Operativ':
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 16.0, "step_m": 2.0})
     abc_sets = vorgaben["sets"]
     
-    te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
+    te_liste = range(1, 3) if st.session_state.auth_modus == "gast" and "Alle" not in te_wahl else (range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))])
     protokoll = []
 
     for woche in te_liste:
@@ -369,7 +379,7 @@ elif st.session_state.navigations_status == 'Operativ':
         aktiver_inhalt = st.session_state.te_anpassungen.get(te_key, standard_inhalt)
 
         key_ist = f"{ziel}_TE_{woche}_ist"
-        ist_wert = st.text_input(f"TE {woche} - Tatsächlich durchgeführt", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist)
+        ist_wert = st.text_input(f"TE {woche} - Tatsächlich durchgeführt", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist, disabled=(st.session_state.auth_modus == "gast"))
         st.session_state.ist_protokoll[key_ist] = ist_wert
 
         protokoll.append({
@@ -413,17 +423,20 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("### ⚙️ Operativer 3-Schritte Protokoll-Workflow")
     
-    with st.expander("✏️ 1. Soll/Ist-Protokoll & TE-Inhalte überarbeiten", expanded=True):
-        col_ed1, col_ed2 = st.columns(2)
-        with col_ed1:
-            ed_te_num = st.selectbox("Trainingseinheit wählen", [f"TE {i}" for i in range(1, 15)], key="ed_te_box")
-        with col_ed2:
-            neuer_inhalt = st.text_input("Inhalt / Disziplin anpassen (z.B. 60m Test / Lauf-ABC)", value=aktiver_inhalt, key="ed_inhalt_input")
-            
-        if st.button("💾 TE-Inhalt permanent aktualisieren"):
-            st.session_state.te_anpassungen[f"{ziel}_{ed_te_num}_inhalt"] = neuer_inhalt
-            st.success(f"{ed_te_num} erfolgreich aktualisiert.")
-            st.rerun()
+    if st.session_state.auth_modus == "trainer":
+        with st.expander("✏️ 1. Soll/Ist-Protokoll & TE-Inhalte überarbeiten", expanded=True):
+            col_ed1, col_ed2 = st.columns(2)
+            with col_ed1:
+                ed_te_num = st.selectbox("Trainingseinheit wählen", [f"TE {i}" for i in range(1, 15)], key="ed_te_box")
+            with col_ed2:
+                neuer_inhalt = st.text_input("Inhalt / Disziplin anpassen (z.B. 60m Test / Lauf-ABC)", value=aktiver_inhalt, key="ed_inhalt_input")
+                
+            if st.button("💾 TE-Inhalt permanent aktualisieren"):
+                st.session_state.te_anpassungen[f"{ziel}_{ed_te_num}_inhalt"] = neuer_inhalt
+                st.success(f"{ed_te_num} erfolgreich aktualisiert.")
+                st.rerun()
+    else:
+        st.info("ℹ️ Gast-Modus aktiv: Bearbeitung von TE-Inhalten nur für lizenzierte Trainer freigeschaltet.")
 
     col_w2, col_w3 = st.columns(2)
     with col_w2:
@@ -439,9 +452,13 @@ elif st.session_state.navigations_status == 'Operativ':
         
     with col_w3:
         st.markdown("**3. Folgematrix übertragen**")
-        if st.button("🚀 Ist-Werte für nächsten Makrozyklus sichern"):
-            st.session_state.folgemakro_speicher[ziel] = "übernommen"
-            st.success(f"Ist-Daten für {ziel} mit adaptiver Progression (+9% Strecke / +5.5% Last) für den nächsten Makrozyklus verankert.")
+        if st.session_state.auth_modus == "trainer":
+            if st.button("🚀 Ist-Werte für nächsten Makrozyklus sichern"):
+                st.session_state.folgemakro_speicher[ziel] = "übernommen"
+                st.success(f"Ist-Daten für {ziel} mit adaptiver Progression (+9% Strecke / +5.5% Last) für den nächsten Makrozyklus verankert.")
+        else:
+            st.button("🚀 Ist-Werte für nächsten Makrozyklus sichern", disabled=True)
+            st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
