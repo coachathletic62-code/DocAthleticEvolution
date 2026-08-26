@@ -1,7 +1,7 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.33)
-# Architektur: 3-Stufig (Logo -> Übersicht.png -> Operative Matrix)
-# Engine: Biometrische Laktat-Kompensation in Tempotabellen & Full-Print
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.35)
+# Architektur: 3-Stufig (Start -> Übersicht -> Operative Matrix)
+# Engine: Kader-Update, Weibliche Laktat-Kompensation, Einzel-Print
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -12,9 +12,18 @@ st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_s
 
 st.markdown("""
 <style>
-    /* Basis-Design */
+    /* Basis-Design und Kontrast-Korrektur */
     .stApp { background-color: #000000; color: #ffffff; }
-    h1, h2, h3, h4, h5, h6, p, div, span, label { color: #ffffff !important; }
+    h1, h2, h3, h4, h5, h6, p, label { color: #ffffff !important; }
+    
+    /* Fix: Weißer Fleck auf Logo (Streamlit Fullscreen Button entfernen) */
+    button[title="View fullscreen"] { display: none !important; }
+    
+    /* Dropdown und Input Kontrast (Schwarz auf Weiß) */
+    .stSelectbox > div > div, .stTextInput > div > div > input {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
     
     /* Buttons */
     .stButton>button {
@@ -29,17 +38,18 @@ st.markdown("""
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
     }
     
-    /* Druckansicht-Tabelle (Volle Länge) */
+    /* Druckansicht-Tabelle */
     .druck-tabelle {
         width: 100%; border-collapse: collapse; margin-top: 10px;
         font-family: Arial, sans-serif; font-size: 14px;
+        color: #ffffff;
     }
     .druck-tabelle th {
         background-color: #1f2833; color: #66fcf1 !important;
         border: 1px solid #45a29e; padding: 10px; text-align: left;
     }
     .druck-tabelle td {
-        border: 1px solid #333333; padding: 8px; color: #ffffff;
+        border: 1px solid #333333; padding: 8px;
     }
     .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
@@ -48,7 +58,7 @@ st.markdown("""
     @media print {
         .stButton, .stSelectbox, .stTextInput, header, footer { display: none !important; }
         .stApp { background-color: white !important; }
-        h1, h2, h3, h4, h5, h6, p, div, span, td { color: black !important; }
+        h1, h2, h3, h4, h5, h6, p, td { color: black !important; }
         .druck-tabelle th { background-color: #dddddd !important; color: black !important; border: 1px solid black; }
         .druck-tabelle td { border: 1px solid black; }
         .steuermatrix { border: none; padding: 0; }
@@ -63,11 +73,14 @@ if 'navigations_status' not in st.session_state:
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
 
-# 3. KADER-DATENBANK & PARAMETER
+# 3. KADER-DATENBANK & PARAMETER (Update 18.35)
 kader = {
-    "Matilda Karnik": {"alter": 14, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
-    "Ronja Borchmeyer": {"alter": 15, "profil": "Fussball_U17_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"},
-    "Aimie": {"alter": 16, "profil": "Fussball_U17_w", "fasertyp": "Kraft", "reife": "Frühentwickler"}
+    "Mathilda Karnik": {"alter": 14, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Sari Saeland": {"alter": 19, "profil": "Fussball_U19_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Ronja Borchmeyer": {"alter": 20, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"},
+    "Svenja Poock": {"alter": 20, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler"},
+    "Nora Giannori": {"alter": 22, "profil": "Fussball_U23_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Mieke Schiemann": {"alter": 24, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"}
 }
 
 abc_parameter = {
@@ -111,7 +124,7 @@ def ermittle_basis_50m(profil, ft, reife):
     return round(basis, 2)
 
 # =========================================================================
-# EBENE 1: STARTBILDSCHIRM (Logo Kai Böge)
+# EBENE 1: STARTBILDSCHIRM
 # =========================================================================
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
@@ -130,13 +143,13 @@ if st.session_state.navigations_status == 'Start':
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
 
 # =========================================================================
-# EBENE 2: SYSTEMÜBERSICHT (Dynamischer Bildaufruf Übersicht.png)
+# EBENE 2: SYSTEMÜBERSICHT
 # =========================================================================
 elif st.session_state.navigations_status == 'Uebersicht':
     st.title("Systemübersicht & Athleten-Datenbank")
+    st.markdown("## Komplex-Training im Nachwuchs bis Hochleistungssport")
     st.markdown("---")
     
-    # Suchroutine für die Übersichtsdatei (Tolerant bei der Schreibweise)
     uebersicht_datei = None
     for datei in os.listdir("."):
         if datei.lower() in ["übersicht.png", "übersicht.jpg", "uebersicht.png", "uebersicht.jpg"]:
@@ -146,10 +159,9 @@ elif st.session_state.navigations_status == 'Uebersicht':
     if uebersicht_datei:
         st.image(uebersicht_datei, use_container_width=True)
     else:
-        st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 50px;'><strong>Die Grafik [Übersicht.png] wurde im Hauptverzeichnis (GitHub) nicht gefunden.</strong><br>Bitte lade die Datei hoch, um das visuelle Dashboard hier zu aktivieren.</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 50px;'><strong>[Übersicht.png] wurde im Verzeichnis nicht gefunden.</strong></div>", unsafe_allow_html=True)
         
     st.markdown("---")
-    
     col1, col2 = st.columns(2)
     with col1:
         st.button("<< ZURÜCK", on_click=navigiere, args=('Start',))
@@ -209,34 +221,34 @@ elif st.session_state.navigations_status == 'Operativ':
 
     basis_50m = ermittle_basis_50m(profil, ft, reife_intern)
 
-    # Laktat-Kompensationsfaktoren
-    komp_100 = 0.975 if "_m" in profil else 1.0  
-    komp_150 = 0.970 if "_m" in profil else 1.0  
-    komp_200 = 0.968 if "_m" in profil else 1.0  
-    komp_300 = 0.963 if "_m" in profil else 1.0  
+    # WEIBLICHE LAKTAT-KOMPENSATION (Reduzierte Eliminierungs-Quote)
+    komp_100 = 1.025 if "_w" in profil else 1.0  
+    komp_150 = 1.035 if "_w" in profil else 1.0  
+    komp_200 = 1.045 if "_w" in profil else 1.0  
+    komp_300 = 1.060 if "_w" in profil else 1.0  
 
     # DIAGNOSTIK
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
-    if "_m" in profil: st.info("⚡ Männliche Enzym-Kompensation (Rechtsverschiebung Laktatkurve) ist aktiv.")
+    if "_w" in profil: st.info("⚡ Weibliche Enzym-Kompensation (Geringere Laktateliminierung bei längeren Distanzen) ist aktiv.")
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
-        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=8.13, step=0.01)
+        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.99, step=0.01)
         if t_60 > 0:
             prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * komp_100
             prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * komp_200
             st.write(f"➡️ Prognose 100m: **{prog_100:.2f} s** | 200m: **{prog_200:.2f} s**")
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=17.80, step=0.01)
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=19.50, step=0.01)
         if t_150 > 0:
-            p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * komp_100
+            p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * (1/komp_100)
             p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * komp_200
             p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * komp_300
             st.write(f"➡️ Prognose 100m: **{p_100:.2f} s** | 200m: **{p_200:.2f} s** | 300m: **{p_300:.2f} s**")
 
     st.markdown("---")
 
-    # TEMPOTABELLEN (Mit Laktat-Kompensation verknüpft)
+    # TEMPOTABELLEN
     st.subheader(f"⏱ Tempotabellen (Biometrisch & Hormonell gekoppelt: Basis {basis_50m}s)")
     def format_time(seconds):
         if seconds >= 60:
@@ -247,9 +259,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     tempo_data = []
     for dist_m in [50, 100, 150, 200]:
-        # Anwendung der Enzym-Kompensation auf die spezifische Streckenlänge
         laktat_kompensation = 1.0
-        if "_m" in profil:
+        if "_w" in profil:
             if dist_m == 100: laktat_kompensation = komp_100
             elif dist_m == 150: laktat_kompensation = komp_150
             elif dist_m == 200: laktat_kompensation = komp_200
@@ -271,9 +282,12 @@ elif st.session_state.navigations_status == 'Operativ':
     st.markdown("---")
 
     # TRAININGSPLAN GENERIERUNG
-    st.subheader(f"📋 Operativer 14-Wochen Makrozyklus: {ziel}")
-    st.markdown("<p style='font-size:12px; color:#94a3b8;'><i>Hinweis: Diese Tabelle baut sich in voller Länge auf, um den direkten Druck (Strg + P) zu ermöglichen.</i></p>", unsafe_allow_html=True)
-    
+    if te_wahl != "Alle TEs (1-14)":
+        st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel} ({te_wahl})")
+        st.markdown("<p style='font-size:12px; color:#94a3b8;'><i>Hinweis: Für den Direktdruck (Strg + P) ist exakt diese einzelne Einheit isoliert.</i></p>", unsafe_allow_html=True)
+    else:
+        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus: {ziel}")
+        
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
             return f"Reduziert (-30%)" if is_gross else f"Reduziert (-20%)"
@@ -347,7 +361,7 @@ elif st.session_state.navigations_status == 'Operativ':
             elif woche == 14:
                 protokoll.append({"TE": f"TE {woche}", "Phase": "DIAGNOSTIK", "Trainingsmittel": "300m Parcours", "Sätze/Wdh": "Soll-Werte", "Soll-Last": "0 kg", "SBE": "SR 0", "Notiz": "Werte für nächste Periode"})
 
-    # Rendering der vollständigen HTML-Tabelle für den Druck
+    # HTML Rendering für Full-Print
     df_proto = pd.DataFrame(protokoll)
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
