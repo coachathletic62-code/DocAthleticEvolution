@@ -1,22 +1,22 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Synthese v18.31)
-# Statisches Logo-Routing (logo.png) + Horizontale Steuerungsmatrix
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.32)
+# Architektur: 3-Stufig (Logo -> Übersicht -> Operative Matrix)
+# Engine: Diagnostik v18.28 & Makrozyklus v18.26
 # =========================================================================
 import streamlit as st
 import pandas as pd
-import math
 
 # 1. VISUELLE ARCHITEKTUR & GRUNDEINSTELLUNGEN
-st.set_page_config(page_title="Doc Athletic Evolution", layout="wide")
+st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
     .stApp {
-        background-color: #000000;
-        color: #ffffff;
+        background-color: #0b0c10;
+        color: #c5c6c7;
     }
     h1, h2, h3, h4, h5, h6, p, div, span, label, th, td {
-        color: #ffffff !important;
+        color: #c5c6c7 !important;
     }
     .stButton>button {
         background-color: #1f2833;
@@ -30,12 +30,13 @@ st.markdown("""
         background-color: #111111;
         border: 2px solid #333333;
         border-radius: 5px;
-        padding: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. SYSTEM-NAVIGATION (3-Stufig)
+# 2. SYSTEM-NAVIGATION
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
@@ -85,23 +86,22 @@ def ermittle_basis_50m(profil, ft, reife):
     elif ft == "Kraft": basis += 0.1
     elif ft == "Ausdauer": basis += 0.3
 
-    if reife == "Spätentwickler": basis += 0.4
-    elif reife == "Frühentwickler": basis -= 0.3
+    if reife in ["Spätentwickler", "Retardiert"]: basis += 0.4
+    elif reife in ["Frühentwickler", "Akzeleriert"]: basis -= 0.3
     return round(basis, 2)
 
 # =========================================================================
-# EBENE 1: STARTBILDSCHIRM
+# EBENE 1: STARTBILDSCHIRM (Schwarzer Grund + Kai Böge Logo)
 # =========================================================================
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
     
-    # Statischer Bildaufruf
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         try:
             st.image("logo.png", use_container_width=True)
         except:
-            st.markdown("<div style='text-align: center; color: #ea580c; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf dem Server nicht gefunden werden. Bitte Verzeichnis prüfen.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden. Bitte lade das Bild exakt mit diesem Namen hoch.</div>", unsafe_allow_html=True)
             
     st.markdown("<br><br>", unsafe_allow_html=True)
     
@@ -110,16 +110,44 @@ if st.session_state.navigations_status == 'Start':
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
 
 # =========================================================================
-# EBENE 2: SYSTEMÜBERSICHT
+# EBENE 2: SYSTEMÜBERSICHT (Kader & Struktur)
 # =========================================================================
 elif st.session_state.navigations_status == 'Uebersicht':
-    st.title("Systemübersicht & Status")
+    st.title("Systemübersicht & Athleten-Datenbank")
     st.markdown("---")
-    st.write("✅ **Visuelle Architektur:** Geladen (Schwarzer Untergrund & Direkte Bildverknüpfung aktiv)")
-    st.write("✅ **Biometrische Datenbank:** Verbunden")
-    st.write("✅ **Diagnostik-Prozessor:** Polynomische Regression (v18.28) aktiv")
-    st.write("✅ **Makrozyklus-Generator:** Vollständige 14-Wochen-Logik (v18.26) aktiv")
-    st.write("✅ **Tempotabellen:** Biometrisch gekoppelt")
+    
+    st.markdown("### 🏟️ Operative Sportarten & Altersklassen")
+    col_sp1, col_sp2, col_sp3, col_sp4 = st.columns(4)
+    col_sp1.info("**Fussball:** U11 bis U23 (m/w)")
+    col_sp2.info("**Basketball:** U17 (m/w)")
+    col_sp3.info("**Leichtathletik:** U17 (m/w)")
+    col_sp4.info("**Skispringen:** U20")
+    
+    st.markdown("### 👤 Gemeldete Athleten (Fokus-Kader)")
+    col_a1, col_a2, col_a3 = st.columns(3)
+    
+    # Platzhalter für Athleten-Fotos & Profile
+    with col_a1:
+        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
+        st.markdown("📷 *[Platzhalter Foto]*")
+        st.write("**Matilda Karnik**")
+        st.write("Fussball U15 (w) | Sprint")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with col_a2:
+        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
+        st.markdown("📷 *[Platzhalter Foto]*")
+        st.write("**Ronja Borchmeyer**")
+        st.write("Fussball U17 (w) | Sprungkraft")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with col_a3:
+        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
+        st.markdown("📷 *[Platzhalter Foto]*")
+        st.write("**Aimie**")
+        st.write("Fussball U17 (w) | Kraft")
+        st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown("---")
     
     col1, col2 = st.columns(2)
@@ -129,36 +157,45 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.button("OPERATIVES MENÜ STARTEN >>", on_click=navigiere, args=('Operativ',))
 
 # =========================================================================
-# EBENE 3: OPERATIVE MASKE (Horizontales Layout analog Desktop-Version)
+# EBENE 3: OPERATIVE MASKE (Steuerung, Diagnostik, Makrozyklus)
 # =========================================================================
 elif st.session_state.navigations_status == 'Operativ':
-    st.button("<< ZUR ÜBERSICHT", on_click=navigiere, args=('Uebersicht',))
-    st.title("🏃‍♂️ Operative Trainingssteuerung")
+    col_top1, col_top2 = st.columns([1, 4])
+    with col_top1:
+        st.button("<< ÜBERSICHT", on_click=navigiere, args=('Uebersicht',))
+    with col_top2:
+        st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
     # HORIZONTALE STEUERUNGSMATRIX
     st.markdown("<div class='steuermatrix'>", unsafe_allow_html=True)
-    st.markdown("### ⚙️ Live-Steuerungsleiste")
+    st.markdown("### ⚙️ Biometrische Live-Steuerung")
     
     c1, c2, c3 = st.columns(3)
     with c1:
-        modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet", "Mannschaft / Kader"])
-        if modus == "Einzelathlet":
+        modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet / Einzelathletin", "Gruppe / Team"])
+        if modus == "Einzelathlet / Einzelathletin":
             ziel = st.selectbox("Ziel (Name)", list(kader.keys()))
         else:
-            ziel = st.selectbox("Ziel (Team)", list(abc_parameter.keys()))
+            ziel = st.selectbox("Ziel (Kader)", list(abc_parameter.keys()))
             
     with c2:
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
-        reife_liste = ["Spätentwickler", "Normalentwickler", "Frühentwickler"]
+        reife_liste = ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]
         
         if ziel in kader:
             profil = kader[ziel]["profil"]
             ft = st.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
-            reife = st.selectbox("Reife-Status", reife_liste, index=reife_liste.index(kader[ziel]["reife"]))
+            
+            # Map reife string
+            reife_val = kader[ziel]["reife"]
+            r_idx = 1
+            if "Spät" in reife_val or "Retard" in reife_val: r_idx = 0
+            if "Früh" in reife_val or "Akzeler" in reife_val: r_idx = 2
+            reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx)
         else:
             profil = ziel
             ft = st.selectbox("Fasertyp", ft_liste)
-            reife = st.selectbox("Reife-Status", reife_liste)
+            reife = st.selectbox("Entwicklungsstatus", reife_liste, index=1)
             
     with c3:
         te_wahl = st.selectbox("Trainingseinheit (TE)", ["Alle TEs (1-14)"] + [f"TE {i}" for i in range(1, 15)])
@@ -168,14 +205,19 @@ elif st.session_state.navigations_status == 'Operativ':
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    basis_50m = ermittle_basis_50m(profil, ft, reife)
+    # Mapping für interne Berechnungen
+    reife_intern = "Normalentwickler"
+    if "Spät" in reife or "Retardiert" in reife: reife_intern = "Spätentwickler"
+    if "Früh" in reife or "Akzeleriert" in reife: reife_intern = "Frühentwickler"
 
-    # DIAGNOSTIK (v18.28)
-    st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
+    basis_50m = ermittle_basis_50m(profil, ft, reife_intern)
+
+    # DIAGNOSTIK
+    st.subheader("🔬 Diagnostik-Modul (Polynomische Regression & Laktat)")
     komp_100 = 0.975 if "_m" in profil else 1.0  
     komp_200 = 0.968 if "_m" in profil else 1.0  
     komp_300 = 0.963 if "_m" in profil else 1.0  
-    if "_m" in profil: st.info("⚡ Männliche Enzym-Kompensation aktiv.")
+    if "_m" in profil: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung aktiv.")
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
@@ -212,13 +254,13 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TRAININGSPLAN GENERIERUNG (Logik v18.26)
-    st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel}")
+    # TRAININGSPLAN GENERIERUNG
+    st.subheader(f"📋 Operativer 14-Wochen Makrozyklus: {ziel}")
     
     def calc_last(base_str, is_gross):
-        if reife == "Spätentwickler":
+        if reife_intern == "Spätentwickler":
             return f"Reduziert (-30%)" if is_gross else f"Reduziert (-20%)"
-        elif reife == "Frühentwickler":
+        elif reife_intern == "Frühentwickler":
             return f"Erhöht (+15%)"
         return base_str
 
