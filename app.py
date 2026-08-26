@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.47)
-# Architektur: 3-Stufig | Engine: Athleten-Löschung, Soll/Ist-Rückkopplung & Volle Blöcke
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.48)
+# Architektur: 3-Stufig | Engine: Historische Profile (Lohmann/Mattusch), Intelligente 150m-Dynamik & Absolute Integrität
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -56,7 +56,9 @@ if 'kader_db' not in st.session_state:
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
-        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80}
+        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80},
+        "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30, "t_150": 17.20},
+        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00, "t_150": 16.20}
     }
 
 if 'ist_protokoll' not in st.session_state:
@@ -166,7 +168,9 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.99)), step=0.01)
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", 19.50)), step=0.01)
+        # Intelligente 150m-Vorkalkulation, falls 60m geändert wird
+        default_150 = float(aktuelle_daten.get("t_150", round(t_60 * 2.44, 2)))
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=default_150, step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
         col_bs1, col_bs2 = st.columns(2)
@@ -194,11 +198,11 @@ elif st.session_state.navigations_status == 'Operativ':
 
     # NEUEN ATHLETEN ANLEGEN
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
-        neu_name = st.text_input("Vollständiger Name (z.B. Christoffer Danders)")
+        neu_name = st.text_input("Vollständiger Name")
         nc1, nc2, nc3 = st.columns(3)
         with nc1:
-            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=19, key="n_alt")
-            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.78, step=0.01, key="n_gro")
+            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=18, key="n_alt")
+            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
         with nc2:
             neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
             neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft")
@@ -215,8 +219,8 @@ elif st.session_state.navigations_status == 'Operativ':
                     "fasertyp": neu_ft,
                     "reife": neu_reife,
                     "sbe": neu_sbe,
-                    "t_60": 7.30,
-                    "t_150": 16.80
+                    "t_60": 7.50,
+                    "t_170": 17.50
                 }
                 st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
                 st.rerun()
@@ -320,7 +324,6 @@ elif st.session_state.navigations_status == 'Operativ':
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
-        # Echte Soll/Ist Erfassung gekoppelt an Session State
         key_ist = f"{ziel}_TE_{woche}_ist"
         ist_wert = st.text_input(f"Ist-Wert Erfassung für TE {woche} (z.B. Ist-Last / tatsächlich gelaufen)", value=st.session_state.ist_protokoll.get(key_ist, "Planmäßig durchgeführt"), key=key_ist)
         st.session_state.ist_protokoll[key_ist] = ist_wert
