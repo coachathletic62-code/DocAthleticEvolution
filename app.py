@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.74)
-# Architektur: 3-Stufig | Engine: Finaler Abschluss mit "Foto.jpg" & Leitsatz
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.75)
+# Architektur: 3-Stufig | Engine: Login-Screen mit Logo, Code-Schutz & Foto-Footer
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -67,8 +67,14 @@ if 'auth_modus' not in st.session_state:
     st.session_state.auth_modus = None
 
 if st.session_state.auth_modus is None:
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 80px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Bitte individuellen Zugriffscode eingeben</p>", unsafe_allow_html=True)
+    col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
+    with col_l2:
+        try:
+            st.image("logo.png", use_container_width=True)
+        except:
+            st.markdown("<h2 style='text-align: center; color: #66fcf1;'>DOC ATHLETIC</h2>", unsafe_allow_html=True)
+            
+    st.markdown("<p style='text-align: center; color: #c5c6c7; margin-top: 20px;'>Bitte individuellen Zugriffscode eingeben</p>", unsafe_allow_html=True)
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     with col_p2:
@@ -465,7 +471,7 @@ elif st.session_state.navigations_status == 'Operativ':
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
 
-    # ABSCHLUSS-FOTO "Foto.jpg" MIT LEITSPRUCH "Aufgeben gilt nicht!"
+    # FINALES ABSCHLUSS-FOTO "Foto.jpg" MIT LEITSPRUCH
     st.markdown("---")
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
