@@ -1,37 +1,57 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.32)
-# Architektur: 3-Stufig (Logo -> Übersicht -> Operative Matrix)
-# Engine: Diagnostik v18.28 & Makrozyklus v18.26
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.33)
+# Architektur: 3-Stufig (Logo -> Übersicht.png -> Operative Matrix)
+# Engine: Biometrische Laktat-Kompensation in Tempotabellen & Full-Print
 # =========================================================================
 import streamlit as st
 import pandas as pd
+import os
 
 # 1. VISUELLE ARCHITEKTUR & GRUNDEINSTELLUNGEN
 st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
-    .stApp {
-        background-color: #0b0c10;
-        color: #c5c6c7;
-    }
-    h1, h2, h3, h4, h5, h6, p, div, span, label, th, td {
-        color: #c5c6c7 !important;
-    }
+    /* Basis-Design */
+    .stApp { background-color: #000000; color: #ffffff; }
+    h1, h2, h3, h4, h5, h6, p, div, span, label { color: #ffffff !important; }
+    
+    /* Buttons */
     .stButton>button {
-        background-color: #1f2833;
-        color: #66fcf1;
-        border: 2px solid #45a29e;
-        border-radius: 8px;
-        width: 100%;
-        font-weight: bold;
+        background-color: #1f2833; color: #66fcf1;
+        border: 2px solid #45a29e; border-radius: 8px;
+        width: 100%; font-weight: bold;
     }
+    
+    /* Steuerungsmatrix */
     .steuermatrix {
-        background-color: #111111;
-        border: 2px solid #333333;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 20px;
+        background-color: #111111; border: 2px solid #333333;
+        border-radius: 5px; padding: 15px; margin-bottom: 20px;
+    }
+    
+    /* Druckansicht-Tabelle (Volle Länge) */
+    .druck-tabelle {
+        width: 100%; border-collapse: collapse; margin-top: 10px;
+        font-family: Arial, sans-serif; font-size: 14px;
+    }
+    .druck-tabelle th {
+        background-color: #1f2833; color: #66fcf1 !important;
+        border: 1px solid #45a29e; padding: 10px; text-align: left;
+    }
+    .druck-tabelle td {
+        border: 1px solid #333333; padding: 8px; color: #ffffff;
+    }
+    .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
+    .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
+
+    /* CSS für sauberen Ausdruck (Strg+P) */
+    @media print {
+        .stButton, .stSelectbox, .stTextInput, header, footer { display: none !important; }
+        .stApp { background-color: white !important; }
+        h1, h2, h3, h4, h5, h6, p, div, span, td { color: black !important; }
+        .druck-tabelle th { background-color: #dddddd !important; color: black !important; border: 1px solid black; }
+        .druck-tabelle td { border: 1px solid black; }
+        .steuermatrix { border: none; padding: 0; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -91,7 +111,7 @@ def ermittle_basis_50m(profil, ft, reife):
     return round(basis, 2)
 
 # =========================================================================
-# EBENE 1: STARTBILDSCHIRM (Schwarzer Grund + Kai Böge Logo)
+# EBENE 1: STARTBILDSCHIRM (Logo Kai Böge)
 # =========================================================================
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
@@ -101,7 +121,7 @@ if st.session_state.navigations_status == 'Start':
         try:
             st.image("logo.png", use_container_width=True)
         except:
-            st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden. Bitte lade das Bild exakt mit diesem Namen hoch.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden.</div>", unsafe_allow_html=True)
             
     st.markdown("<br><br>", unsafe_allow_html=True)
     
@@ -110,44 +130,24 @@ if st.session_state.navigations_status == 'Start':
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
 
 # =========================================================================
-# EBENE 2: SYSTEMÜBERSICHT (Kader & Struktur)
+# EBENE 2: SYSTEMÜBERSICHT (Dynamischer Bildaufruf Übersicht.png)
 # =========================================================================
 elif st.session_state.navigations_status == 'Uebersicht':
     st.title("Systemübersicht & Athleten-Datenbank")
     st.markdown("---")
     
-    st.markdown("### 🏟️ Operative Sportarten & Altersklassen")
-    col_sp1, col_sp2, col_sp3, col_sp4 = st.columns(4)
-    col_sp1.info("**Fussball:** U11 bis U23 (m/w)")
-    col_sp2.info("**Basketball:** U17 (m/w)")
-    col_sp3.info("**Leichtathletik:** U17 (m/w)")
-    col_sp4.info("**Skispringen:** U20")
-    
-    st.markdown("### 👤 Gemeldete Athleten (Fokus-Kader)")
-    col_a1, col_a2, col_a3 = st.columns(3)
-    
-    # Platzhalter für Athleten-Fotos & Profile
-    with col_a1:
-        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
-        st.markdown("📷 *[Platzhalter Foto]*")
-        st.write("**Matilda Karnik**")
-        st.write("Fussball U15 (w) | Sprint")
-        st.markdown("</div>", unsafe_allow_html=True)
+    # Suchroutine für die Übersichtsdatei (Tolerant bei der Schreibweise)
+    uebersicht_datei = None
+    for datei in os.listdir("."):
+        if datei.lower() in ["übersicht.png", "übersicht.jpg", "uebersicht.png", "uebersicht.jpg"]:
+            uebersicht_datei = datei
+            break
+            
+    if uebersicht_datei:
+        st.image(uebersicht_datei, use_container_width=True)
+    else:
+        st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 50px;'><strong>Die Grafik [Übersicht.png] wurde im Hauptverzeichnis (GitHub) nicht gefunden.</strong><br>Bitte lade die Datei hoch, um das visuelle Dashboard hier zu aktivieren.</div>", unsafe_allow_html=True)
         
-    with col_a2:
-        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
-        st.markdown("📷 *[Platzhalter Foto]*")
-        st.write("**Ronja Borchmeyer**")
-        st.write("Fussball U17 (w) | Sprungkraft")
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    with col_a3:
-        st.markdown("<div style='border: 1px solid #45a29e; padding: 10px; border-radius: 5px; text-align: center;'>", unsafe_allow_html=True)
-        st.markdown("📷 *[Platzhalter Foto]*")
-        st.write("**Aimie**")
-        st.write("Fussball U17 (w) | Kraft")
-        st.markdown("</div>", unsafe_allow_html=True)
-
     st.markdown("---")
     
     col1, col2 = st.columns(2)
@@ -157,7 +157,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.button("OPERATIVES MENÜ STARTEN >>", on_click=navigiere, args=('Operativ',))
 
 # =========================================================================
-# EBENE 3: OPERATIVE MASKE (Steuerung, Diagnostik, Makrozyklus)
+# EBENE 3: OPERATIVE MASKE
 # =========================================================================
 elif st.session_state.navigations_status == 'Operativ':
     col_top1, col_top2 = st.columns([1, 4])
@@ -186,7 +186,6 @@ elif st.session_state.navigations_status == 'Operativ':
             profil = kader[ziel]["profil"]
             ft = st.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
             
-            # Map reife string
             reife_val = kader[ziel]["reife"]
             r_idx = 1
             if "Spät" in reife_val or "Retard" in reife_val: r_idx = 0
@@ -203,21 +202,22 @@ elif st.session_state.navigations_status == 'Operativ':
         sbe_ziel = st.text_input("SBE (Saubere Reserve)", vorgaben["sbe_ziel"])
         
     st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("---")
 
-    # Mapping für interne Berechnungen
     reife_intern = "Normalentwickler"
     if "Spät" in reife or "Retardiert" in reife: reife_intern = "Spätentwickler"
     if "Früh" in reife or "Akzeleriert" in reife: reife_intern = "Frühentwickler"
 
     basis_50m = ermittle_basis_50m(profil, ft, reife_intern)
 
-    # DIAGNOSTIK
-    st.subheader("🔬 Diagnostik-Modul (Polynomische Regression & Laktat)")
+    # Laktat-Kompensationsfaktoren
     komp_100 = 0.975 if "_m" in profil else 1.0  
+    komp_150 = 0.970 if "_m" in profil else 1.0  
     komp_200 = 0.968 if "_m" in profil else 1.0  
     komp_300 = 0.963 if "_m" in profil else 1.0  
-    if "_m" in profil: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung aktiv.")
+
+    # DIAGNOSTIK
+    st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
+    if "_m" in profil: st.info("⚡ Männliche Enzym-Kompensation (Rechtsverschiebung Laktatkurve) ist aktiv.")
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
@@ -236,8 +236,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TEMPOTABELLEN
-    st.subheader(f"⏱ Tempotabellen (Biometrisch gekoppelt: {basis_50m}s)")
+    # TEMPOTABELLEN (Mit Laktat-Kompensation verknüpft)
+    st.subheader(f"⏱ Tempotabellen (Biometrisch & Hormonell gekoppelt: Basis {basis_50m}s)")
     def format_time(seconds):
         if seconds >= 60:
             m = int(seconds // 60)
@@ -247,15 +247,32 @@ elif st.session_state.navigations_status == 'Operativ':
 
     tempo_data = []
     for dist_m in [50, 100, 150, 200]:
-        base_s = basis_50m * (dist_m / 50.0)
-        row = {"Distanz": f"{dist_m}m", "100%": format_time(base_s), "95%": format_time(base_s/0.95), "90%": format_time(base_s/0.90), "80%": format_time(base_s/0.80), "70%": format_time(base_s/0.70)}
+        # Anwendung der Enzym-Kompensation auf die spezifische Streckenlänge
+        laktat_kompensation = 1.0
+        if "_m" in profil:
+            if dist_m == 100: laktat_kompensation = komp_100
+            elif dist_m == 150: laktat_kompensation = komp_150
+            elif dist_m == 200: laktat_kompensation = komp_200
+
+        base_s = (basis_50m * (dist_m / 50.0)) * laktat_kompensation
+        
+        row = {
+            "Distanz": f"{dist_m}m", 
+            "100%": format_time(base_s), 
+            "95%": format_time(base_s/0.95), 
+            "90%": format_time(base_s/0.90), 
+            "80%": format_time(base_s/0.80), 
+            "70%": format_time(base_s/0.70)
+        }
         tempo_data.append(row)
-    st.table(tempo_data)
+    
+    st.table(pd.DataFrame(tempo_data).set_index("Distanz"))
 
     st.markdown("---")
 
     # TRAININGSPLAN GENERIERUNG
     st.subheader(f"📋 Operativer 14-Wochen Makrozyklus: {ziel}")
+    st.markdown("<p style='font-size:12px; color:#94a3b8;'><i>Hinweis: Diese Tabelle baut sich in voller Länge auf, um den direkten Druck (Strg + P) zu ermöglichen.</i></p>", unsafe_allow_html=True)
     
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
@@ -330,4 +347,7 @@ elif st.session_state.navigations_status == 'Operativ':
             elif woche == 14:
                 protokoll.append({"TE": f"TE {woche}", "Phase": "DIAGNOSTIK", "Trainingsmittel": "300m Parcours", "Sätze/Wdh": "Soll-Werte", "Soll-Last": "0 kg", "SBE": "SR 0", "Notiz": "Werte für nächste Periode"})
 
-    st.dataframe(pd.DataFrame(protokoll), use_container_width=True, hide_index=True)
+    # Rendering der vollständigen HTML-Tabelle für den Druck
+    df_proto = pd.DataFrame(protokoll)
+    html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
+    st.markdown(html_tabelle, unsafe_allow_html=True)
