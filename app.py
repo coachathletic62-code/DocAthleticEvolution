@@ -1,7 +1,7 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.37)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.38)
 # Architektur: 3-Stufig (Start -> Übersicht -> Operative Matrix)
-# Engine: Exakte Korrelation (Diagnostik -> Tempotabelle) & Print-Befehl
+# Engine: Absolute mathematische Synchronisation (Prognose = Tempotabelle) & Biometrie
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -14,20 +14,17 @@ st.markdown("""
 <style>
     .stApp { background-color: #000000; color: #ffffff; }
     h1, h2, h3, h4, h5, h6, p, label { color: #ffffff !important; }
-    
     button[title="View fullscreen"] { display: none !important; }
     
     .stSelectbox > div > div, .stTextInput > div > div > input, .stNumberInput > div > div > input {
         background-color: #ffffff !important;
         color: #000000 !important;
     }
-    
     .stButton>button {
         background-color: #1f2833; color: #66fcf1;
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    
     .druck-btn {
         background-color: #ea580c; color: #ffffff; border: none; padding: 12px 20px;
         font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
@@ -39,7 +36,6 @@ st.markdown("""
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
     }
-    
     .druck-tabelle {
         width: 100%; border-collapse: collapse; margin-top: 10px;
         font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;
@@ -72,12 +68,12 @@ def navigiere(ziel):
 
 # 3. KADER-DATENBANK & PARAMETER
 kader = {
-    "Mathilda Karnik": {"alter": 14, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
-    "Sari Saeland": {"alter": 19, "profil": "Fussball_U19_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
-    "Ronja Borchmeyer": {"alter": 20, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"},
-    "Svenja Poock": {"alter": 20, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler"},
-    "Nora Giannori": {"alter": 22, "profil": "Fussball_U23_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
-    "Mieke Schiemann": {"alter": 24, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"}
+    "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"},
+    "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler"},
+    "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
+    "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"}
 }
 
 abc_parameter = {
@@ -95,42 +91,22 @@ abc_parameter = {
     "Basketball_U17_w": {"sets": 5, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
     "Leichtathletik_U17_m": {"sets": 5, "start_m": 25.0, "step_m": 3.5, "sbe_ziel": "SR 1-2"},
     "Leichtathletik_U17_w": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1-2"},
-    "Skispringen_U20": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1"}
+    "Skispringen_U20": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
+    "Hochleistung_m": {"sets": 6, "start_m": 30.0, "step_m": 3.0, "sbe_ziel": "SR 0"},
+    "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
-
-def ermittle_basis_50m(profil, ft, reife):
-    if "U11" in profil: basis = 7.7 if "_m" in profil else 8.2
-    elif "U13" in profil: basis = 7.1 if "_m" in profil else 7.6
-    elif "U15_m" in profil: basis = 6.2
-    elif "U15_w" in profil: basis = 6.8
-    elif "U17_m" in profil: basis = 5.8
-    elif "U17_w" in profil: basis = 6.5
-    elif "U19_m" in profil or "U23_m" in profil: basis = 5.5
-    elif "U19_w" in profil or "U23_w" in profil: basis = 6.3
-    else: basis = 6.6
-
-    if ft == "Schnelligkeit (Sprint)": basis -= 0.2
-    elif ft in ["Sprungkraft", "Gazelle"]: basis -= 0.1
-    elif ft == "Kraft": basis += 0.1
-    elif ft == "Ausdauer": basis += 0.3
-
-    if reife in ["Spätentwickler", "Retardiert"]: basis += 0.4
-    elif reife in ["Frühentwickler", "Akzeleriert"]: basis -= 0.3
-    return round(basis, 2)
 
 # =========================================================================
 # EBENE 1: STARTBILDSCHIRM
 # =========================================================================
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         try:
             st.image("logo.png", use_container_width=True)
         except:
             st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden.</div>", unsafe_allow_html=True)
-            
     st.markdown("<br><br>", unsafe_allow_html=True)
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
@@ -172,36 +148,44 @@ elif st.session_state.navigations_status == 'Operativ':
     with col_top2:
         st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
+    # HORIZONTALE STEUERUNGSMATRIX (4 Spalten inkl. Alter & Größe)
     st.markdown("<div class='steuermatrix'>", unsafe_allow_html=True)
     st.markdown("### ⚙️ Biometrische Live-Steuerung")
     
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet / Einzelathletin", "Gruppe / Team"])
         if modus == "Einzelathlet / Einzelathletin":
             ziel = st.selectbox("Ziel (Name)", list(kader.keys()))
+            profil_soll = kader[ziel]["profil"]
         else:
             ziel = st.selectbox("Ziel (Kader)", list(abc_parameter.keys()))
+            profil_soll = ziel
             
     with c2:
+        # Biometrische Parameter
+        default_alter = kader[ziel]["alter"] if ziel in kader else 18
+        default_groesse = kader[ziel]["groesse"] if ziel in kader else 1.70
+        alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=default_alter)
+        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=default_groesse, step=0.01)
+
+    with c3:
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
         reife_liste = ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]
         
         if ziel in kader:
-            profil = kader[ziel]["profil"]
             ft = st.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
             reife_val = kader[ziel]["reife"]
             r_idx = 0 if "Spät" in reife_val else 2 if "Früh" in reife_val else 1
             reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx)
         else:
-            profil = ziel
             ft = st.selectbox("Fasertyp", ft_liste)
             reife = st.selectbox("Entwicklungsstatus", reife_liste, index=1)
             
-    with c3:
+    with c4:
         te_wahl = st.selectbox("Trainingseinheit (TE)", ["Alle TEs (1-14)"] + [f"TE {i}" for i in range(1, 15)])
-        vorgaben = abc_parameter.get(profil, {"sets": 4, "start_m": 16.0, "step_m": 2.0, "sbe_ziel": "SR 2"})
-        sbe_ziel = st.text_input("SBE (Saubere Reserve)", vorgaben["sbe_ziel"])
+        vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 16.0, "step_m": 2.0, "sbe_ziel": "SR 2"})
+        sbe_ziel = st.text_input("SBE (Reserve)", vorgaben["sbe_ziel"])
         
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -209,14 +193,13 @@ elif st.session_state.navigations_status == 'Operativ':
 
     # DIAGNOSTIK & KORRELATION
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
-    if "_w" in profil: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
+    if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.99, step=0.01)
         if t_60 > 0:
-            if "_w" in profil:
-                # Exakt kalibriert auf 7.99s -> 12.61s (Faktor 2.55 abweichend von Basis)
+            if "_w" in profil_soll:
                 prog_100 = 12.61 + ((t_60 - 7.99) * 2.55)
                 prog_200 = 27.00 + ((t_60 - 7.99) * 5.0)
             else:
@@ -227,7 +210,7 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col2:
         t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=19.50, step=0.01)
         if t_150 > 0:
-            if "_w" in profil:
+            if "_w" in profil_soll:
                 p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98 
                 p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * 1.045
                 p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * 1.060
@@ -239,9 +222,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TEMPOTABELLEN (Dynamisch aus 100m-Prognose abgeleitet)
-    live_basis_50m = prog_100 / 1.93 # Rückrechnung der 50m Basis aus der exakten 100m Live-Prognose
-    st.subheader(f"⏱ Tempotabellen (Individuell gekoppelt an Live-Prognose: Basis 50m = {live_basis_50m:.2f}s)")
+    # TEMPOTABELLEN (Absolut synchronisiert mit der Prognose)
+    st.subheader(f"⏱ Tempotabellen (Exakt gekoppelt an Live-Prognose)")
     def format_time(seconds):
         if seconds >= 60:
             m = int(seconds // 60)
@@ -250,14 +232,16 @@ elif st.session_state.navigations_status == 'Operativ':
         return f"{seconds:.1f} s"
 
     tempo_data = []
+    # Mathematische absolute Koppelung
     for dist_m in [50, 100, 150, 200]:
-        laktat_kompensation = 1.0
-        if "_w" in profil:
-            if dist_m == 100: laktat_kompensation = 1.025
-            elif dist_m == 150: laktat_kompensation = 1.035
-            elif dist_m == 200: laktat_kompensation = 1.045
-
-        base_s = (live_basis_50m * (dist_m / 50.0)) * laktat_kompensation
+        if dist_m == 50:
+            base_s = prog_100 / 1.93
+        elif dist_m == 100:
+            base_s = prog_100
+        elif dist_m == 150:
+            base_s = (prog_100 / 1.93) * 2.82
+        elif dist_m == 200:
+            base_s = prog_200
         
         row = {
             "Distanz": f"{dist_m}m", 
@@ -289,13 +273,13 @@ elif st.session_state.navigations_status == 'Operativ':
             return f"Erhöht (+15%)"
         return base_str
 
-    basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil else "2-3 kg" if "U13" in profil else "3-5 kg" if "U15_w" in profil else "4-6 kg" if "U15_m" in profil else "5-8 kg" if "U17_w" in profil else "10-12 kg"
+    basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil_soll else "2-3 kg" if "U13" in profil_soll else "3-5 kg" if "U15_w" in profil_soll else "4-6 kg" if "U15_m" in profil_soll else "5-8 kg" if "U17_w" in profil_soll else "10-12 kg"
     basis_last = calc_last(basis_last, True)
 
-    stangen_gewicht = "1.5 kg" if "U11" in profil or "U13" in profil else "2.0 kg" if "U15" in profil else "3.0 kg"
+    stangen_gewicht = "1.5 kg" if "U11" in profil_soll or "U13" in profil_soll else "2.0 kg" if "U15" in profil_soll else "3.0 kg"
     stangen_gewicht = calc_last(stangen_gewicht, False)
 
-    is_skisprung = "Skispringen" in profil
+    is_skisprung = "Skispringen" in profil_soll
     abc_sets = vorgaben["sets"]
     
     te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
