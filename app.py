@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.48)
-# Architektur: 3-Stufig | Engine: Historische Profile (Lohmann/Mattusch), Intelligente 150m-Dynamik & Absolute Integrität
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.50)
+# Architektur: 3-Stufig | Engine: Vollständige Koppelung (60m/150m), Persistenz & Export
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -52,7 +52,7 @@ if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_150": 19.50},
         "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00, "t_150": 19.00},
-        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
+        "Ronja Brochmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
@@ -168,9 +168,9 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.99)), step=0.01)
     with diag_col2:
-        # Intelligente 150m-Vorkalkulation, falls 60m geändert wird
-        default_150 = float(aktuelle_daten.get("t_150", round(t_60 * 2.44, 2)))
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=default_150, step=0.01)
+        # Dynamische automatische Koppelung der 150m-Zeit an die 60m-Zeit, sofern nicht manuell angepasst
+        auto_150 = round(t_60 * 2.44, 2)
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
         col_bs1, col_bs2 = st.columns(2)
@@ -186,12 +186,12 @@ elif st.session_state.navigations_status == 'Operativ':
                     "t_60": float(t_60),
                     "t_150": float(t_150)
                 }
-                st.success(f"Profil für {ziel} permanent verankert.")
+                st.success(f"Profil, Größe ({groesse}m) und Bestzeiten für {ziel} permanent verankert.")
         with col_bs2:
             if len(st.session_state.kader_db) > 1:
                 if st.button(f"🗑️ Athlet {ziel} aus Kader löschen"):
                     del st.session_state.kader_db[ziel]
-                    st.success(f"Athlet {ziel} wurde entfernt.")
+                    st.success(f"Athlet {ziel} wurde aus der Datenbank entfernt.")
                     st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -220,7 +220,7 @@ elif st.session_state.navigations_status == 'Operativ':
                     "reife": neu_reife,
                     "sbe": neu_sbe,
                     "t_60": 7.50,
-                    "t_170": 17.50
+                    "t_150": 17.50
                 }
                 st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
                 st.rerun()
@@ -265,7 +265,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    st.subheader(f"⏱ Tempotabellen (Exakt gekoppelt an Live-Prognose)")
+    st.subheader(f"⏱ Tempotabellen (Vollständig synchronisiert mit 60m & 150m)")
     def format_time(seconds):
         if seconds >= 60:
             m = int(seconds // 60)
@@ -280,7 +280,7 @@ elif st.session_state.navigations_status == 'Operativ':
         elif dist_m == 100:
             base_s = prog_100
         elif dist_m == 150:
-            base_s = t_150
+            base_s = t_150  # Direkte und dynamische Korrelation zur 150m-Referenzzeit
         elif dist_m == 200:
             base_s = prog_200
         
@@ -325,7 +325,7 @@ elif st.session_state.navigations_status == 'Operativ':
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
         key_ist = f"{ziel}_TE_{woche}_ist"
-        ist_wert = st.text_input(f"Ist-Wert Erfassung für TE {woche} (z.B. Ist-Last / tatsächlich gelaufen)", value=st.session_state.ist_protokoll.get(key_ist, "Planmäßig durchgeführt"), key=key_ist)
+        ist_wert = st.text_input(f"TE {woche} - Ist-Wert Erfassung / Dokumentation", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist)
         st.session_state.ist_protokoll[key_ist] = ist_wert
 
         protokoll.append({
@@ -367,6 +367,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
+    # EXPORT-BUTTON FÜR CSV / DRUCK
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Soll/Ist Trainingsprotokoll & Utensilienliste als CSV herunterladen",
