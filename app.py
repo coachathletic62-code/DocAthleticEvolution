@@ -1,9 +1,10 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.54)
-# Architektur: 3-Stufig | Engine: Leichtathletik U14/U15 Profile, Eingabe-Fix & Export
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.55)
+# Architektur: 3-Stufig | Engine: Stabiler HTML-Export, Diagnostik-Chronologie & Layout-Fix
 # =========================================================================
 import streamlit as st
 import pandas as pd
+import base64
 import os
 
 st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
@@ -23,10 +24,12 @@ st.markdown("""
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    .export-container {
-        background-color: #1f2833; border: 3px solid #ea580c;
-        padding: 15px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; text-align: center;
+    .export-box {
+        background-color: #ea580c; color: #ffffff; padding: 15px;
+        text-align: center; border-radius: 8px; margin-top: 15px; margin-bottom: 25px;
+        font-weight: bold; font-size: 16px; cursor: pointer;
     }
+    .export-box a { color: #ffffff !important; text-decoration: none; display: block; }
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
@@ -62,7 +65,8 @@ if 'kader_db' not in st.session_state:
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
         "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80},
         "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30, "t_150": 17.20},
-        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00, "t_150": 16.20}
+        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00, "t_150": 16.20},
+        "Franziska Nimmich": {"alter": 13, "groesse": 1.65, "profil": "Leichtathletik_U14", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Frühentwickler (Akzeleriert)", "sbe": "SR 1", "t_60": 7.90, "t_150": 18.50}
     }
 
 if 'ist_protokoll' not in st.session_state:
@@ -202,9 +206,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # NEUEN ATHLETEN ANLEGEN (Mit Übernahme der echten Eingaben)
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
-        neu_name = st.text_input("Vollständiger Name (z.B. Franziska)")
+        neu_name = st.text_input("Vollständiger Name")
         nc1, nc2, nc3 = st.columns(3)
         with nc1:
             neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=13, key="n_alt")
@@ -251,19 +254,22 @@ elif st.session_state.navigations_status == 'Operativ':
     if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
     elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
+    # CHRONOLOGISCHE ANORDNUNG: Links = Aktuelle Ist-Korrelation | Rechts = 12-Monats-Prognosekorridor
     res_col1, res_col2 = st.columns(2)
+    
     with res_col1:
+        st.markdown("#### 📌 Aktuelle Ist-Korrelation (Referenzbasis)")
         if t_60 > 0:
             if "_w" in profil_soll:
-                prog_100 = 12.61 + ((t_60 - 7.99) * 2.55)
-                prog_200 = 27.00 + ((t_60 - 7.99) * 5.0)
+                akt_100 = 12.61 + ((t_60 - 7.99) * 2.55)
+                akt_200 = 27.00 + ((t_60 - 7.99) * 5.0)
             else:
-                komp_100 = 0.975
-                prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * komp_100
-                prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * 0.968
-            st.write(f"➡️ Prognose 100m (12-Monats-Korridor): **{prog_100:.2f} s** | 200m: **{prog_200:.2f} s**")
-            
+                akt_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * 0.975
+                akt_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * 0.968
+            st.write(f"➡️ 60m: **{t_60:.2f} s** | 100m (Basis): **{akt_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{akt_200:.2f} s**")
+
     with res_col2:
+        st.markdown("#### 🎯 12-Monats-Entwicklungsprognose")
         if t_150 > 0:
             if "_w" in profil_soll:
                 p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98 
@@ -288,13 +294,13 @@ elif st.session_state.navigations_status == 'Operativ':
     tempo_data = []
     for dist_m in [50, 100, 150, 200]:
         if dist_m == 50:
-            base_s = prog_100 / 1.93
+            base_s = akt_100 / 1.93
         elif dist_m == 100:
-            base_s = prog_100
+            base_s = akt_100
         elif dist_m == 150:
             base_s = t_150
         elif dist_m == 200:
-            base_s = prog_200
+            base_s = akt_200
         
         row = {
             "Distanz": f"{dist_m}m", 
@@ -310,7 +316,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # SEHR MARKanter, FIXIERTER EXPORT-BEREICH FÜR WLAN / DRUCK
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Soll/Ist-Abgleich & Utensilien-Logistik: {ziel} ({te_wahl})")
     else:
@@ -380,16 +385,18 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    # Fixierter, markanter Export-Container oben vor der Tabelle
-    csv_data = df_proto.to_csv(index=False).encode('utf-8')
-    st.markdown('<div class="export-container">', unsafe_allow_html=True)
-    st.download_button(
-        label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
-        data=csv_data,
-        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
-        mime="text/csv"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # SAUBERER HTML/BASE64 EXPORT-BUTTON (Garantiert sicht- und klickbar)
+    csv_bytes = df_proto.to_csv(index=False).encode('utf-8')
+    b64 = base64.b64encode(csv_bytes).decode()
+    download_filename = f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv"
+    
+    st.markdown(f"""
+    <div class="export-box">
+        <a href="data:file/csv;base64,{b64}" download="{download_filename}">
+            📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
