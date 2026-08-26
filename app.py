@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.59)
-# Architektur: 3-Stufig | Engine: Fester Kader-Sync, Button-Fix & Exakte Wettkampf-Referenzen
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.60)
+# Architektur: 3-Stufig | Engine: Kontrast-Export-Button (Cyan/Schwarz), Christoffer Fix & Kader-Sync
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -22,6 +22,17 @@ st.markdown("""
         background-color: #1f2833; color: #66fcf1;
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
+    }
+    /* Kontrastreicher, sofort sichtbarer Download-Button */
+    .stDownloadButton > button {
+        background-color: #66fcf1 !important;
+        color: #0b0c10 !important;
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        border: 3px solid #45a29e !important;
+        border-radius: 8px !important;
+        width: 100% !important;
+        padding: 12px !important;
     }
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
@@ -48,7 +59,7 @@ st.markdown("""
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
-# Verbindliche Kader-Datenbank exakt nach den hochgeladenen Dokumenten
+# Verbindliche Kader-Datenbank (Christoffer Danders mit K, Franziska Nimmich, etc.)
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_100": 13.50, "t_150": 19.50, "t_200": 28.50},
@@ -254,8 +265,8 @@ elif st.session_state.navigations_status == 'Operativ':
     
     with res_col1:
         st.markdown("#### 📌 Aktuelle Ist-Korrelation (Wettkampf-Referenz)")
-        real_100 = aktuelle_daten.get("t_100", 12.85)
-        real_200 = aktuelle_daten.get("t_200", 25.80)
+        real_100 = aktuelle_daten.get("t_100", 13.00)
+        real_200 = aktuelle_daten.get("t_200", 27.00)
         st.write(f"➡️ 60m: **{t_60:.2f} s** | 100m: **{real_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{real_200:.2f} s**")
 
     with res_col2:
@@ -370,7 +381,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    # 100% stabiler nativer Streamlit Download Button (Kein CSS/HTML Rendering Fehler mehr)
+    # 100% nativer Streamlit Download Button mit knallhartem Cyan-Design
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
