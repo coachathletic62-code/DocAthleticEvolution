@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.72)
-# Architektur: 3-Stufig | Engine: Freie Code-Wahl, Foto-Integration & "Aufgeben gilt nicht!"
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.74)
+# Architektur: 3-Stufig | Engine: Finaler Abschluss mit "Foto.jpg" & Leitsatz
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -53,15 +53,15 @@ st.markdown("""
     .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
     .footer-box {
-        text-align: center; border: 2px solid #ea580c; border-radius: 10px;
-        padding: 20px; margin-top: 40px; background-color: #0b0c10;
+        text-align: center; border: 2px solid #66fcf1; border-radius: 10px;
+        padding: 25px; margin-top: 40px; margin-bottom: 20px; background-color: #0b0c10;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# HIER KANNST DU DIE ZUGRIFFSCODES INDIVIDUELL ANPASSEN (TOP SECRET)
+# AUTHENTIFIZIERUNG (Frei anpassbare Codes)
 GAST_CODE = "gast2026"
-TRAINER_CODE = "DocAthletic#2026!"  # Frei änderbar
+TRAINER_CODE = "DocAthletic#2026!"
 
 if 'auth_modus' not in st.session_state:
     st.session_state.auth_modus = None
@@ -87,7 +87,6 @@ if st.session_state.auth_modus is None:
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
-# Unverrückbare Kader-Datenbank
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -466,18 +465,17 @@ elif st.session_state.navigations_status == 'Operativ':
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
 
-    # FOOTER MIT FOTO UND LEITSPRUCH "Aufgeben gilt nicht!"
+    # ABSCHLUSS-FOTO "Foto.jpg" MIT LEITSPRUCH "Aufgeben gilt nicht!"
     st.markdown("---")
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
         st.markdown("""
         <div class="footer-box">
-            <h3 style="color: #66fcf1 !important; margin-bottom: 10px;">Aufgeben gilt nicht!</h3>
-            <p style="color: #c5c6c7; font-size: 14px; margin-bottom: 15px;">Trainingcamps & Performance-Strukturen</p>
-            <p style="color: #ffffff; font-size: 13px;">📞 0176 - 57843252 | ✉️ info@doc-athletic.de | 🌐 www.doc-athletic.de</p>
+            <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
+            <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION</p>
         </div>
         """, unsafe_allow_html=True)
         try:
-            st.image("foto.png", use_container_width=True)
+            st.image("Foto.jpg", use_container_width=True)
         except:
-            pass
+            st.markdown("<div style='text-align: center; color: #66fcf1; padding: 10px;'>[Foto.jpg] wird im Hauptverzeichnis gesucht.</div>", unsafe_allow_html=True)
