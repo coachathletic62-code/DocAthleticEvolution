@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.39)
-# Architektur: 3-Stufig | Engine: Persistentes Session-State Management & Kader-Pflege
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.41)
+# Architektur: 3-Stufig | Engine: Vollständige Athleten-Profilbindung (Fasertyp, Reife, SBE, Referenzzeiten)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -36,10 +36,6 @@ st.markdown("""
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
     }
-    .kader-box {
-        background-color: #161b22; border: 1px solid #30363d;
-        border-radius: 5px; padding: 15px; margin-top: 15px; margin-bottom: 20px;
-    }
     .druck-tabelle {
         width: 100%; border-collapse: collapse; margin-top: 10px;
         font-family: Arial, sans-serif; font-size: 14px; color: #ffffff;
@@ -53,7 +49,7 @@ st.markdown("""
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
 
     @media print {
-        .stButton, .stSelectbox, .stTextInput, .stNumberInput, .druck-btn, .kader-box, header, footer { display: none !important; }
+        .stButton, .stSelectbox, .stTextInput, .stNumberInput, .druck-btn, header, footer { display: none !important; }
         .stApp { background-color: white !important; }
         h1, h2, h3, h4, h5, h6, p, td { color: black !important; }
         .druck-tabelle th { background-color: #dddddd !important; color: black !important; border: 1px solid black; }
@@ -63,18 +59,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. SYSTEM-NAVIGATION & SESSION STATE INITIALISIERUNG
+# 2. SYSTEM-NAVIGATION & INITIALISIERUNG KADER-DB (Inkl. exakter biologischer Profile)
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
-        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3"},
-        "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2"},
-        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler", "sbe": "SR 2"},
-        "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2"},
-        "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2"},
-        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler", "sbe": "SR 2"}
+        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_150": 19.50},
+        "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00, "t_150": 19.00},
+        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
+        "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
+        "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
+        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20}
     }
 
 def navigiere(ziel):
@@ -152,7 +148,6 @@ elif st.session_state.navigations_status == 'Operativ':
     with col_top2:
         st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
-    # STEUERUNGSMATRIX
     st.markdown("<div class='steuermatrix'>", unsafe_allow_html=True)
     st.markdown("### ⚙️ Biometrische Live-Steuerung & Kader-Verwaltung")
     
@@ -166,7 +161,7 @@ elif st.session_state.navigations_status == 'Operativ':
         else:
             ziel = st.selectbox("Ziel (Kader)", list(abc_parameter.keys()))
             profil_soll = ziel
-            aktuelle_daten = {"alter": 18, "groesse": 1.70, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"]}
+            aktuelle_daten = {"alter": 18, "groesse": 1.70, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 8.00, "t_150": 19.00}
             
     with c2:
         alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]))
@@ -187,24 +182,29 @@ elif st.session_state.navigations_status == 'Operativ':
         te_wahl = st.selectbox("Trainingseinheit (TE)", ["Alle TEs (1-14)"] + [f"TE {i}" for i in range(1, 15)])
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"])
         
-    # PERSISTENZ-BUTTONS
+    # DIAGNOSTIK REFERENZZEITEN (Eingebunden in den Speicher-Zyklus)
+    diag_col1, diag_col2 = st.columns(2)
+    with diag_col1:
+        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.99)), step=0.01)
+    with diag_col2:
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", 19.50)), step=0.01)
+
     if modus == "Einzelathlet / Einzelathletin":
-        col_btn_s1, col_btn_s2 = st.columns(2)
-        with col_btn_s1:
-            if st.button("💾 Athleten-Profil speichern"):
-                st.session_state.kader_db[ziel] = {
-                    "alter": int(alter),
-                    "groesse": float(groesse),
-                    "profil": profil_soll,
-                    "fasertyp": ft,
-                    "reife": reife,
-                    "sbe": sbe_ziel
-                }
-                st.success(f"Daten für {ziel} erfolgreich permanent gespeichert.")
+        if st.button("💾 Athleten-Profil & Bestzeiten permanent speichern"):
+            st.session_state.kader_db[ziel] = {
+                "alter": int(alter),
+                "groesse": float(groesse),
+                "profil": profil_soll,
+                "fasertyp": ft,
+                "reife": reife,
+                "sbe": sbe_ziel,
+                "t_60": float(t_60),
+                "t_150": float(t_150)
+            }
+            st.success(f"Profil und Referenzwerte für {ziel} erfolgreich permanent verankert.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # NEUEN ATHLETEN ANLEGEN (Kader Erweiterung)
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
         neu_name = st.text_input("Vollständiger Name")
         nc1, nc2, nc3 = st.columns(3)
@@ -226,7 +226,9 @@ elif st.session_state.navigations_status == 'Operativ':
                     "profil": neu_profil,
                     "fasertyp": neu_ft,
                     "reife": neu_reife,
-                    "sbe": neu_sbe
+                    "sbe": neu_sbe,
+                    "t_60": 8.00,
+                    "t_150": 19.50
                 }
                 st.success(f"Athletin {neu_name.strip()} erfolgreich angelegt.")
                 st.rerun()
@@ -235,13 +237,12 @@ elif st.session_state.navigations_status == 'Operativ':
 
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
 
-    # DIAGNOSTIK & KORRELATION
+    # DIAGNOSTIK-MODUL AUSFÜHRUNG
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
     if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
         
-    diag_col1, diag_col2 = st.columns(2)
-    with diag_col1:
-        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.99, step=0.01)
+    res_col1, res_col2 = st.columns(2)
+    with res_col1:
         if t_60 > 0:
             if "_w" in profil_soll:
                 prog_100 = 12.61 + ((t_60 - 7.99) * 2.55)
@@ -251,8 +252,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2)))
             st.write(f"➡️ Prognose 100m: **{prog_100:.2f} s** | 200m: **{prog_200:.2f} s**")
             
-    with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=19.50, step=0.01)
+    with res_col2:
         if t_150 > 0:
             if "_w" in profil_soll:
                 p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98 
@@ -266,7 +266,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TEMPOTABELLEN
+    # TEMPOTABELLEN (Absolut synchronisiert)
     st.subheader(f"⏱ Tempotabellen (Exakt gekoppelt an Live-Prognose)")
     def format_time(seconds):
         if seconds >= 60:
@@ -282,7 +282,7 @@ elif st.session_state.navigations_status == 'Operativ':
         elif dist_m == 100:
             base_s = prog_100
         elif dist_m == 150:
-            base_s = (prog_100 / 1.93) * 2.82
+            base_s = t_150  # Direkte Koppelung an die gespeicherte/eingetragene 150m-Referenz
         elif dist_m == 200:
             base_s = prog_200
         
