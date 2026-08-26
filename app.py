@@ -1,10 +1,9 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.45)
-# Architektur: 3-Stufig | Engine: Korrektur Christopher Danders (1,78m, 27.03.2007, 12.3s / 40.5s)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.46)
+# Architektur: 3-Stufig | Engine: CSV-Export, Soll/Ist-Vergleich & Automatische Material-Liste
 # =========================================================================
 import streamlit as st
 import pandas as pd
-import io
 import os
 
 st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
@@ -57,7 +56,7 @@ if 'kader_db' not in st.session_state:
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
-        "Christopher Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80}
+        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80}
     }
 
 def navigiere(ziel):
@@ -182,6 +181,37 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # NEUEN ATHLETEN ANLEGEN (Permanenter Expander)
+    with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen (inkl. Christoffer Danders)"):
+        neu_name = st.text_input("Vollständiger Name (z.B. Christoffer Danders)")
+        nc1, nc2, nc3 = st.columns(3)
+        with nc1:
+            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=19, key="n_alt")
+            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.78, step=0.01, key="n_gro")
+        with nc2:
+            neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
+            neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft")
+        with nc3:
+            neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei")
+            neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
+            
+        if st.button("Athlet anlegen & in Datenbank verankern"):
+            if neu_name.strip():
+                st.session_state.kader_db[neu_name.strip()] = {
+                    "alter": int(neu_alter),
+                    "groesse": float(neu_groesse),
+                    "profil": neu_profil,
+                    "fasertyp": neu_ft,
+                    "reife": neu_reife,
+                    "sbe": neu_sbe,
+                    "t_60": 7.30,
+                    "t_150": 16.80
+                }
+                st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
+                st.rerun()
+            else:
+                st.error("Bitte einen gültigen Namen eingeben.")
+
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
 
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
@@ -253,19 +283,11 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # EXCEL-DOWNLOAD FÜR PERFEKTEN DRUCK
-    def to_excel(df):
-        output = io.BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        df.to_excel(writer, index=False, sheet_name='Trainingsprotokoll')
-        writer.close()
-        processed_data = output.getvalue()
-        return processed_data
-
+    # TRAININGSPLAN GENERIERUNG (Inkl. Soll/Ist Korrektur & Material-Liste)
     if te_wahl != "Alle TEs (1-14)":
-        st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel} ({te_wahl})")
+        st.subheader(f"📋 Operatives Trainingsprotokoll & Soll/Ist-Korrektur: {ziel} ({te_wahl})")
     else:
-        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus & Komplex-Training: {ziel}")
+        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus, Soll/Ist & Material-Liste: {ziel}")
         
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
@@ -304,23 +326,39 @@ elif st.session_state.navigations_status == 'Operativ':
             f_notiz = "Typ 2A Dominanz: Mech. Last"
 
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
-        stange_notiz = f"Stange über Kopf | {f_notiz}" if woche <= 6 else f"Ohne Zusatzlast | {f_notiz}"
-
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 1", "Inhalt / Trainingsmittel": "Allg. & Spez. Erwärmung: 400m Shuttle einlaufen, STL-Läufe, aktive Dehnung", "Sätze x Wdh.": "1 x 400m + STL", "Last": "0 kg", "SBE": sbe_ziel, "Notiz": f"Fasertyp: {ft}"})
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 2", "Inhalt / Trainingsmittel": "Neuromuskuläre Innervation (Lauf-ABC & Speed Drills)", "Sätze x Wdh.": f"{abc_sets} x {abc_dist:.1f} m", "Last": stange_last if woche <= 6 else "0 kg", "SBE": sbe_ziel, "Notiz": "Gestreckte Stange über Kopf"})
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 3", "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle-Beschleunigung & Squat-Stoß-Jumps)", "Sätze x Wdh.": "4 Durchgänge", "Last": basis_last, "SBE": sbe_ziel, "Notiz": "Optimale biomechanische Kette"})
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 4", "Inhalt / Trainingsmittel": "Spezifischer Laufumfang (Tempoläufe nach Tempotabelle)", "Sätze/Wdh": "5 x 100m TL (80% Vmax)", "Last": "0 kg", "SBE": sbe_ziel, "Notiz": "Gehpause zurück"})
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 5", "Inhalt / Trainingsmittel": "Unilaterale Belastung & Ischiocrurale Sicherung (Ausfallschritt-Gehen & Leg Speed Curler)", "Sätze x Wdh.": "3 x 22 Wdh. L/R", "Last": "Mod. / 4 kg", "SBE": sbe_ziel, "Notiz": "Posterior-femorale Sicherung"})
-        protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 6", "Inhalt / Trainingsmittel": "Rumpf- & Oberkörper-Athletik (Aufricht-Einwurfcrunch & TRX-Zug)", "Sätze x Wdh.": "3 Durchgänge", "Last": "5-7 kg Griffball", "SBE": "SR 1", "Notiz": "Tonus-Absenkung / Statische Dehnung"})
+        
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 1", "Geplant: Inhalt": "400m Shuttle einlaufen & STL-Läufe", "Geplant: Last": "0 kg", "IST: Ausgeführt": "400m Shuttle", "IST: Last/Wdh": "0 kg", "SBE": sbe_ziel})
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 2", "Geplant: Inhalt": f"Lauf-ABC ({abc_sets} x {abc_dist:.1f}m)", "Geplant: Last": stange_last, "IST: Ausgeführt": "Lauf-ABC absolviert", "IST: Last/Wdh": stange_last, "SBE": sbe_ziel})
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 3", "Geplant: Inhalt": "Reaktiv-Komplex (Shuttle & Squat-Stoß-Jumps)", "Geplant: Last": basis_last, "IST: Ausgeführt": "Reaktiv-Komplex", "IST: Last/Wdh": basis_last, "SBE": sbe_ziel})
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 4", "Geplant: Inhalt": "5 x 100m Tempoläufe (80% Vmax)", "Geplant: Last": "0 kg", "IST: Ausgeführt": "TL absolviert", "IST: Last/Wdh": "0 kg", "SBE": sbe_ziel})
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 5", "Geplant: Inhalt": "Unilaterale Sicherung & Leg Speed Curler", "Geplant: Last": "Mod. / 4 kg", "IST: Ausgeführt": "Curler absolviert", "IST: Last/Wdh": "Mod. / 4 kg", "SBE": sbe_ziel})
+        protokoll.append({"TE": f"TE {woche}", "Block": "Block 6", "Geplant: Inhalt": "Rumpf & Oberkörper (Einwurfcrunch & TRX)", "Geplant: Last": "5-7 kg Griffball", "IST: Ausgeführt": "Rumpf absolviert", "IST: Last/Wdh": "5-7 kg", "SBE": "SR 1"})
 
     df_proto = pd.DataFrame(protokoll)
     
-    excel_data = to_excel(df_proto)
+    # AUTOMATISIERTE MATERIAL- UND GERÄTELISTE
+    st.markdown("### 🛠️ Automatische Trainingsmittel- & Geräteretoure-Liste")
+    st.markdown("*Erforderliches Equipment für die selektierte Trainingseinheit (berechnet nach Team- und Materialmatrix):*")
+    
+    material_liste = [
+        {"Trainingsmittel / Equipment": "Aluminium-Gewichtsstangen (1.5 - 3.0 kg)", "Benötigte Anzahl": "1 Stange pro Athlet", "Spezifikation": "Für Lauf-ABC über Kopf"},
+        {"Trainingsmittel / Equipment": "Power Bars / Gewichtsstangen", "Benötigte Anzahl": "1 pro Athlet", "Spezifikation": f"Lastbereich: {basis_last}"},
+        {"Trainingsmittel / Equipment": "Griffbälle / Medizinbälle", "Benötigte Anzahl": "1 pro Station", "Spezifikation": "5-7 kg (für Einwurfcrunch)"},
+        {"Trainingsmittel / Equipment": "Leg Speed Curler", "Benötigte Anzahl": "Geräte-Platzzuweisung", "Spezifikation": "90% Amplitude (Ischiocrurale Sicherung)"},
+        {"Trainingsmittel / Equipment": "TRX-Schlingentrainer / Reck", "Benötigte Anzahl": "Entsprechend Gruppengröße", "Spezifikation": "Schrägliegehang"},
+        {"Trainingsmittel / Equipment": "Hürden / Markierungskegel", "Benötigte Anzahl": "8-12 Stück", "Spezifikation": "Für Shuttle-Beschleunigung & Lauf-ABC"}
+    ]
+    st.table(pd.DataFrame(material_liste))
+
+    st.markdown("---")
+
+    # CSV-DOWNLOAD FÜR PERFEKTEN EXCEL/DRUCK-EXPORT
+    csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Trainingsprotokoll als Excel-Datei herunterladen (Für perfekten Druck)",
-        data=excel_data,
-        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        label="📥 Trainingsprotokoll & Soll/Ist als CSV herunterladen (Excel-kompatibel)",
+        data=csv_data,
+        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
+        mime="text/csv"
     )
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
