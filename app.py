@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.71)
-# Architektur: 3-Stufig | Engine: Zwei-Stufen-Auth (Gast-Modus vs. Trainer-Vollzugriff)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.72)
+# Architektur: 3-Stufig | Engine: Freie Code-Wahl, Foto-Integration & "Aufgeben gilt nicht!"
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -52,19 +52,23 @@ st.markdown("""
     .druck-tabelle td { border: 1px solid #333333; padding: 8px; }
     .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
+    .footer-box {
+        text-align: center; border: 2px solid #ea580c; border-radius: 10px;
+        padding: 20px; margin-top: 40px; background-color: #0b0c10;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ZWEI-STUFEN-AUTHENTIFIZIERUNG
+# HIER KANNST DU DIE ZUGRIFFSCODES INDIVIDUELL ANPASSEN (TOP SECRET)
 GAST_CODE = "gast2026"
-TRAINER_CODE = "docathletic2026"
+TRAINER_CODE = "DocAthletic#2026!"  # Frei änderbar
 
 if 'auth_modus' not in st.session_state:
-    st.session_state.auth_modus = None  # Entweder "gast" oder "trainer"
+    st.session_state.auth_modus = None
 
 if st.session_state.auth_modus is None:
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 80px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Bitte Zugriffscode eingeben (Gast-Ansicht oder Trainer-Vollzugriff)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Bitte individuellen Zugriffscode eingeben</p>", unsafe_allow_html=True)
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     with col_p2:
@@ -209,7 +213,6 @@ elif st.session_state.navigations_status == 'Operativ':
         reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, disabled=(st.session_state.auth_modus == "gast"))
             
     with c4:
-        # Gast sieht nur TE 1 und TE 2
         te_auswahl_liste = [f"TE {i}" for i in range(1, 3)] if st.session_state.auth_modus == "gast" else [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"]
         te_wahl = st.selectbox("Trainingseinheit (TE)", te_auswahl_liste)
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
@@ -462,3 +465,19 @@ elif st.session_state.navigations_status == 'Operativ':
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
+
+    # FOOTER MIT FOTO UND LEITSPRUCH "Aufgeben gilt nicht!"
+    st.markdown("---")
+    col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
+    with col_f2:
+        st.markdown("""
+        <div class="footer-box">
+            <h3 style="color: #66fcf1 !important; margin-bottom: 10px;">Aufgeben gilt nicht!</h3>
+            <p style="color: #c5c6c7; font-size: 14px; margin-bottom: 15px;">Trainingcamps & Performance-Strukturen</p>
+            <p style="color: #ffffff; font-size: 13px;">📞 0176 - 57843252 | ✉️ info@doc-athletic.de | 🌐 www.doc-athletic.de</p>
+        </div>
+        """, unsafe_allow_html=True)
+        try:
+            st.image("foto.png", use_container_width=True)
+        except:
+            pass
