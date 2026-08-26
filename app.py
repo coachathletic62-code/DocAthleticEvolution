@@ -1,10 +1,9 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.58)
-# Architektur: 3-Stufig | Engine: Button-Text-Fix, Inkrement-Stabilität & Wettkampf-Referenzen
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.59)
+# Architektur: 3-Stufig | Engine: Fester Kader-Sync, Button-Fix & Exakte Wettkampf-Referenzen
 # =========================================================================
 import streamlit as st
 import pandas as pd
-import base64
 import os
 
 st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
@@ -24,12 +23,6 @@ st.markdown("""
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    .export-box {
-        background-color: #ea580c !important; padding: 18px;
-        text-align: center; border-radius: 8px; margin-top: 15px; margin-bottom: 25px;
-        font-weight: bold; font-size: 15px; border: 2px solid #c2410c;
-    }
-    .export-box a { color: #ffffff !important; text-decoration: none !important; display: block; width: 100%; }
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
@@ -55,6 +48,7 @@ st.markdown("""
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
+# Verbindliche Kader-Datenbank exakt nach den hochgeladenen Dokumenten
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_100": 13.50, "t_150": 19.50, "t_200": 28.50},
@@ -192,7 +186,9 @@ elif st.session_state.navigations_status == 'Operativ':
                     "reife": reife,
                     "sbe": sbe_ziel,
                     "t_60": float(t_60),
-                    "t_150": float(t_150)
+                    "t_150": float(t_150),
+                    "t_100": aktuelle_daten.get("t_100", 13.00),
+                    "t_200": aktuelle_daten.get("t_200", 27.00)
                 }
                 st.success(f"Profil, Größe ({groesse}m) und Bestzeiten für {ziel} permanent verankert.")
         with col_bs2:
@@ -208,20 +204,20 @@ elif st.session_state.navigations_status == 'Operativ':
         neu_name = st.text_input("Vollständiger Name")
         nc1, nc2, nc3 = st.columns(3)
         with nc1:
-            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=13, key="n_alt")
-            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.71, step=0.01, key="n_gro")
+            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=15, key="n_alt")
+            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
         with nc2:
             neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
             neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft", index=4)
         with nc3:
-            neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei", index=2)
+            neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei", index=1)
             neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
             
         nc_z1, nc_z2 = st.columns(2)
         with nc_z1:
-            neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.90, step=0.01, key="n_t60")
+            neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
         with nc_z2:
-            neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.50, step=0.01, key="n_t150")
+            neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
             
         if st.button("Athlet anlegen & in Datenbank verankern"):
             if neu_name.strip():
@@ -233,7 +229,9 @@ elif st.session_state.navigations_status == 'Operativ':
                     "reife": neu_reife,
                     "sbe": neu_sbe,
                     "t_60": float(neu_t60),
-                    "t_150": float(neu_t150)
+                    "t_150": float(neu_t150),
+                    "t_100": 12.50,
+                    "t_200": 26.00
                 }
                 st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
                 st.rerun()
@@ -256,8 +254,8 @@ elif st.session_state.navigations_status == 'Operativ':
     
     with res_col1:
         st.markdown("#### 📌 Aktuelle Ist-Korrelation (Wettkampf-Referenz)")
-        real_100 = aktuelle_daten.get("t_100", 12.85) if ziel == "Franziska Nimmich" else (12.61 + ((t_60 - 7.99) * 2.55) if "_w" in profil_soll else (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * 0.975)
-        real_200 = aktuelle_daten.get("t_200", 25.80) if ziel == "Franziska Nimmich" else (27.00 + ((t_60 - 7.99) * 5.0) if "_w" in profil_soll else (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * 0.968)
+        real_100 = aktuelle_daten.get("t_100", 12.85)
+        real_200 = aktuelle_daten.get("t_200", 25.80)
         st.write(f"➡️ 60m: **{t_60:.2f} s** | 100m: **{real_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{real_200:.2f} s**")
 
     with res_col2:
@@ -372,15 +370,15 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
+    # 100% stabiler nativer Streamlit Download Button (Kein CSS/HTML Rendering Fehler mehr)
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
-    st.markdown('<div class="export-box">', unsafe_allow_html=True)
     st.download_button(
         label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
         data=csv_data,
         file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
-        mime="text/csv"
+        mime="text/csv",
+        key="download_btn_safe"
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
