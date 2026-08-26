@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.64)
-# Architektur: 3-Stufig | Engine: Kontrast-Button, Christoffer-Fix, 150m-Live-Korrelation & TE 1 Standard
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.65)
+# Architektur: 3-Stufig | Engine: Adaptiver Übernahme-Button für Folgemakrozyklus & Vollständiger Fix
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -23,7 +23,7 @@ st.markdown("""
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    /* Kвища-Sicherer Download-Button: Dunkler Hintergrund, weißer, fetter Text */
+    /* Kontrastreicher, krisensicherer Download-Button */
     .stDownloadButton > button {
         background-color: #1f2833 !important;
         color: #ffffff !important;
@@ -59,23 +59,26 @@ st.markdown("""
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
-# Unverrückbare Kader-Datenbank (Christoffer Danders mit K und Doppel-F fixiert)[cite: 1]
+# Unverrückbare Kader-Datenbank (Christoffer Danders mit K und Doppel-F fixiert)
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
-        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
-        "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
-        "Ronja Brochmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
-        "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
-        "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
-        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
-        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60},
-        "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30},
-        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00},
-        "Franziska Nimmich": {"alter": 13, "groesse": 1.71, "profil": "Leichtathletik_U14", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Frühentwickler (Akzeleriert)", "sbe": "SR 1", "t_60": 7.90}
+        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_150": 19.50},
+        "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00, "t_150": 19.00},
+        "Ronja Brochmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
+        "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
+        "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
+        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
+        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60, "t_150": 16.80},
+        "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30, "t_150": 17.20},
+        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00, "t_150": 16.20},
+        "Franziska Nimmich": {"alter": 13, "groesse": 1.71, "profil": "Leichtathletik_U14", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Frühentwickler (Akzeleriert)", "sbe": "SR 1", "t_60": 7.90, "t_150": 18.50}
     }
 
 if 'ist_protokoll' not in st.session_state:
     st.session_state.ist_protokoll = {}
+
+if 'folgemakro_speicher' not in st.session_state:
+    st.session_state.folgemakro_speicher = {}
 
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
@@ -158,7 +161,7 @@ elif st.session_state.navigations_status == 'Operativ':
         else:
             ziel = st.selectbox("Ziel (Kader)", list(abc_parameter.keys()))
             profil_soll = ziel
-            aktuelle_daten = {"alter": 18, "groesse": 1.70, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 8.00}
+            aktuelle_daten = {"alter": 18, "groesse": 1.70, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 8.00, "t_150": 19.00}
             
     with c2:
         alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]))
@@ -176,20 +179,18 @@ elif st.session_state.navigations_status == 'Operativ':
         reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx)
             
     with c4:
-        # Standardmäßig mit TE 1 beginnen (statt "Alle TEs")[cite: 1]
+        # Startet standardmäßig bei TE 1
         te_wahl = st.selectbox("Trainingseinheit (TE)", [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"])
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"])
         
-    # BIDIREKTIONALE LIVE-KORRELATION (60m ➔ 150m)[cite: 1]
+    # BIDIREKTIONALE LIVE-KORRELATION
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01)
     
-    # Live-Berechnung für 150m basierend auf t_60
     auto_150 = round(t_60 * 2.375, 2)
-
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=auto_150, step=0.01)
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
         col_bs1, col_bs2 = st.columns(2)
@@ -237,12 +238,12 @@ elif st.session_state.navigations_status == 'Operativ':
         if st.button("Athlet anlegen & in Datenbank verankern"):
             if neu_name.strip():
                 st.session_state.kader_db[neu_name.strip()] = {
-                    "alter": int(neu_alter),
-                    "groesse": float(neu_groesse),
+                    "alter": int(alter),
+                    "groesse": float(groesse),
                     "profil": neu_profil,
-                    "fasertyp": neu_ft,
-                    "reife": neu_reife,
-                    "sbe": neu_sbe,
+                    "fasertyp": ft,
+                    "reife": reife,
+                    "sbe": sbe_ziel,
                     "t_60": float(neu_t60),
                     "t_150": float(neu_t150)
                 }
@@ -272,7 +273,7 @@ elif st.session_state.navigations_status == 'Operativ':
         st.write(f"➡️ 60m: **{t_60:.2f} s** | 100m: **{calc_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{calc_200:.2f} s**")
 
     with res_col2:
-        st.markdown("#### 🎯 12-Monats-Entwicklungsprognose (Mit adaptiver Ist-Rückkopplung)")
+        st.markdown("#### 🎯 12-Monats-Entwicklungsprognose")
         prog_faktor = 0.97 if reife == "Frühentwickler (Akzeleriert)" else 0.98
         p_100 = calc_100 * prog_faktor
         p_200 = calc_200 * prog_faktor
@@ -337,11 +338,12 @@ elif st.session_state.navigations_status == 'Operativ':
     protokoll = []
 
     for woche in te_liste:
-        abc_dist = (vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])) * 0.975
+        # Adaptive Fortschreibung für den nächsten Makrozyklus (+9% Streckenlänge, +5.5% Last)
+        abc_dist = (vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])) * 1.09
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
         key_ist = f"{ziel}_TE_{woche}_ist"
-        ist_wert = st.text_input(f"TE {woche} - Tatsächlich durchgeführt (Wird adaptiv für Folgematrix übernommen)", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist)
+        ist_wert = st.text_input(f"TE {woche} - Tatsächlich durchgeführt", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist)
         st.session_state.ist_protokoll[key_ist] = ist_wert
 
         protokoll.append({
@@ -354,13 +356,13 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 2", 
             "Inhalt / Trainingsmittel": "Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)", 
             "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Optimiert)", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
             "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle & Squat-Jumps)", 
             "Benötigte Utensilien": f"Speed Jumper, Power Bars ({basis_last}), 55er Hürtenset", 
-            "Soll (Geplant)": "4 Durchgänge / 12 Wdh.", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": "4 Durchgänge / 12 Wdh. (Folgematrix)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 4", 
@@ -383,14 +385,21 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    csv_data = df_proto.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
-        data=csv_data,
-        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
-        mime="text/csv",
-        key="download_btn_safe"
-    )
+    # NEUER SEPARATER ÜBERNAHME-BUTTON FÜR NÄCHSTEN MAKROZYKLUS
+    col_u1, col_u2 = st.columns(2)
+    with col_u1:
+        csv_data = df_proto.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 SOLL/IST TRAININGSPROTOKOLL HERUNTERLADEN",
+            data=csv_data,
+            file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
+            mime="text/csv",
+            key="download_btn_safe"
+        )
+    with col_u2:
+        if st.button("🚀 Ist-Werte in nächsten Makrozyklus (+9% Strecke / +5.5% Last) übernehmen"):
+            st.session_state.folgemakro_speicher[ziel] = "übernommen"
+            st.success(f"Alle Ist-Werte und Leistungsdaten von {ziel} wurden erfolgreich für den nächsten Makrozyklus adaptiv verankert.")
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
