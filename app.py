@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.46)
-# Architektur: 3-Stufig | Engine: Soll/Ist-Abgleich, Utensilien-Logistik & CSV-Export
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.47)
+# Architektur: 3-Stufig | Engine: Athleten-Löschung, Soll/Ist-Rückkopplung & Volle Blöcke
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -58,6 +58,9 @@ if 'kader_db' not in st.session_state:
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
         "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80}
     }
+
+if 'ist_protokoll' not in st.session_state:
+    st.session_state.ist_protokoll = {}
 
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
@@ -166,22 +169,30 @@ elif st.session_state.navigations_status == 'Operativ':
         t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", 19.50)), step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
-        if st.button("💾 Athleten-Profil & Bestzeiten permanent speichern"):
-            st.session_state.kader_db[ziel] = {
-                "alter": int(alter),
-                "groesse": float(groesse),
-                "profil": profil_soll,
-                "fasertyp": ft,
-                "reife": reife,
-                "sbe": sbe_ziel,
-                "t_60": float(t_60),
-                "t_150": float(t_150)
-            }
-            st.success(f"Profil und Referenzwerte für {ziel} erfolgreich permanent verankert.")
+        col_bs1, col_bs2 = st.columns(2)
+        with col_bs1:
+            if st.button("💾 Athleten-Profil & Bestzeiten permanent speichern"):
+                st.session_state.kader_db[ziel] = {
+                    "alter": int(alter),
+                    "groesse": float(groesse),
+                    "profil": profil_soll,
+                    "fasertyp": ft,
+                    "reife": reife,
+                    "sbe": sbe_ziel,
+                    "t_60": float(t_60),
+                    "t_150": float(t_150)
+                }
+                st.success(f"Profil für {ziel} permanent verankert.")
+        with col_bs2:
+            if len(st.session_state.kader_db) > 1:
+                if st.button(f"🗑️ Athlet {ziel} aus Kader löschen"):
+                    del st.session_state.kader_db[ziel]
+                    st.success(f"Athlet {ziel} wurde entfernt.")
+                    st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # NEUEN ATHLETEN ANLEGEN (Wiederhergestellt & Korrigiert)
+    # NEUEN ATHLETEN ANLEGEN
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
         neu_name = st.text_input("Vollständiger Name (z.B. Christoffer Danders)")
         nc1, nc2, nc3 = st.columns(3)
@@ -283,11 +294,10 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # SOLL / IST ABGLEICH & UTENSILIEN-LOGISTIK PROTOKOLL
     if te_wahl != "Alle TEs (1-14)":
-        st.subheader(f"📋 Operatives Trainingsprotokoll & Soll/Ist-Abgleich: {ziel} ({te_wahl})")
+        st.subheader(f"📋 Soll/Ist-Abgleich & Utensilien-Logistik: {ziel} ({te_wahl})")
     else:
-        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus & Utensilien-Logistik: {ziel}")
+        st.subheader(f"📋 Vollständiger Makrozyklus, Soll/Ist & Utensilien-Logistik: {ziel}")
         
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
@@ -308,52 +318,57 @@ elif st.session_state.navigations_status == 'Operativ':
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
-        
-        if ft == "Ausdauer":
-            abc_dist *= 1.20
-            erw_text, sprint_text, ausdauer_satz = "Erweiterte Shuttle-Aktivierung", "Erhalt-Sprints", "5 x 150m (70% / 90s)"
-        elif ft == "Schnelligkeit (Sprint)":
-            abc_dist *= 0.90
-            erw_text, sprint_text, ausdauer_satz = "ZNS-Aktivierung (Gepard)", "Max. Beschleunigung", "2 x 100m (80% / 180s)"
-        elif ft in ["Sprungkraft", "Gazelle"]:
-            erw_text, sprint_text, ausdauer_satz = "Reaktiv-Aktivierung", "Fliegender Sprint", "4 x 100m (75% / 120s)"
-        else:
-            abc_dist *= 0.95
-            erw_text, sprint_text, ausdauer_satz = "Kraft-Mobilisation", "Beschleunigung gegen Last", "4 x 100m (70% / 150s)"
-
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
-        # Protokoll-Einträge mit Soll/Ist und Utensilien
+        # Echte Soll/Ist Erfassung gekoppelt an Session State
+        key_ist = f"{ziel}_TE_{woche}_ist"
+        ist_wert = st.text_input(f"Ist-Wert Erfassung für TE {woche} (z.B. Ist-Last / tatsächlich gelaufen)", value=st.session_state.ist_protokoll.get(key_ist, "Planmäßig durchgeführt"), key=key_ist)
+        st.session_state.ist_protokoll[key_ist] = ist_wert
+
         protokoll.append({
-            "TE": f"TE {woche}", "Block": "Block 1-2", 
-            "Inhalt / Trainingsmittel": "Erwärmung & Lauf-ABC", 
-            "Benötigte Utensilien": "Gewichtsstangen (1.5-3 kg)", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m", "Ist (Durchgeführt)": f"_____ x _____ m", 
-            "Soll-Last": stange_last, "Ist-Last / RPE": "_____ kg / SBE _____"
+            "TE": f"TE {woche}", "Block": "Block 1", 
+            "Inhalt / Trainingsmittel": "Allg. & Spez. Erwärmung: 400m Shuttle einlaufen, STL-Läufe, aktive Dehnung", 
+            "Benötigte Utensilien": "Hütchen, Markierungsschienen", 
+            "Soll (Geplant)": "1 x 400m + STL", "Tatsächlich Ist": ist_wert
+        })
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 2", 
+            "Inhalt / Trainingsmittel": "Neuromuskuläre Innervation (Lauf-ABC & Speed Drills)", 
+            "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
-            "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2)", 
-            "Benötigte Utensilien": "Speed Jumper, Power Bars, Hürtenset (55er)", 
-            "Soll (Geplant)": "4 Durchgänge / 12 Wdh.", "Ist (Durchgeführt)": "_____ Durchgänge", 
-            "Soll-Last": basis_last, "Ist-Last / RPE": "_____ kg / SBE _____"
+            "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle-Beschleunigung & Squat-Stoß-Jumps)", 
+            "Benötigte Utensilien": f"Speed Jumper, Power Bars ({basis_last}), 55er Hürtenset", 
+            "Soll (Geplant)": "4 Durchgänge / 12 Wdh.", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
-            "TE": f"TE {woche}", "Block": "Block 4-6", 
-            "Inhalt / Trainingsmittel": "Tempoläufe, Leg Speed Curler & Rumpf-Athletik", 
-            "Benötigte Utensilien": "Leg Speed Curler, Kettlebells (2-4 kg), Griffbälle (5-7 kg), TRX", 
-            "Soll (Geplant)": "Nach Tempotabelle / 3x22 Wdh.", "Ist (Durchgeführt)": "____________________", 
-            "Soll-Last": "Moderat", "Ist-Last / RPE": "_____ kg / SBE _____"
+            "TE": f"TE {woche}", "Block": "Block 4", 
+            "Inhalt / Trainingsmittel": "Spezifischer Laufumfang (Tempoläufe nach Tempotabelle)", 
+            "Benötigte Utensilien": "Messband / Stoppuhr", 
+            "Soll (Geplant)": "5 x 100m TL (80% Vmax)", "Tatsächlich Ist": ist_wert
+        })
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 5", 
+            "Inhalt / Trainingsmittel": "Unilaterale Belastung & Ischiocrurale Sicherung (Ausfallschritt-Gehen & Leg Speed Curler)", 
+            "Benötigte Utensilien": "Leg Speed Curler, Kettlebells (2-4 kg)", 
+            "Soll (Geplant)": "3 x 22 Wdh. L/R", "Tatsächlich Ist": ist_wert
+        })
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 6", 
+            "Inhalt / Trainingsmittel": "Rumpf- & Oberkörper-Athletik (Aufricht-Einwurfcrunch & TRX-Zug)", 
+            "Benötigte Utensilien": "Griffbälle (5-7 kg), TRX-Bänder", 
+            "Soll (Geplant)": "3 Durchgänge", "Tatsächlich Ist": ist_wert
         })
 
     df_proto = pd.DataFrame(protokoll)
     
-    # CSV-Download für sauberen, universellen Export ohne Fehler
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Trainingsprotokoll & Utensilienliste als CSV herunterladen",
+        label="📥 Soll/Ist Trainingsprotokoll & Utensilienliste als CSV herunterladen",
         data=csv_data,
-        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
+        file_name=f"Doc_Athletic_Soll_Ist_{ziel.replace(' ', '_')}.csv",
         mime="text/csv"
     )
 
