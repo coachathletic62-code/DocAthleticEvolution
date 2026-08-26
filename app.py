@@ -1,6 +1,6 @@
 # =========================================================================
 # DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.46)
-# Architektur: 3-Stufig | Engine: CSV-Export, Soll/Ist-Vergleich & Automatische Material-Liste
+# Architektur: 3-Stufig | Engine: Soll/Ist-Abgleich, Utensilien-Logistik & CSV-Export
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -181,8 +181,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # NEUEN ATHLETEN ANLEGEN (Permanenter Expander)
-    with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen (inkl. Christoffer Danders)"):
+    # NEUEN ATHLETEN ANLEGEN (Wiederhergestellt & Korrigiert)
+    with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
         neu_name = st.text_input("Vollständiger Name (z.B. Christoffer Danders)")
         nc1, nc2, nc3 = st.columns(3)
         with nc1:
@@ -283,11 +283,11 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TRAININGSPLAN GENERIERUNG (Inkl. Soll/Ist Korrektur & Material-Liste)
+    # SOLL / IST ABGLEICH & UTENSILIEN-LOGISTIK PROTOKOLL
     if te_wahl != "Alle TEs (1-14)":
-        st.subheader(f"📋 Operatives Trainingsprotokoll & Soll/Ist-Korrektur: {ziel} ({te_wahl})")
+        st.subheader(f"📋 Operatives Trainingsprotokoll & Soll/Ist-Abgleich: {ziel} ({te_wahl})")
     else:
-        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus, Soll/Ist & Material-Liste: {ziel}")
+        st.subheader(f"📋 Operativer 14-Wochen Makrozyklus & Utensilien-Logistik: {ziel}")
         
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
@@ -311,51 +311,47 @@ elif st.session_state.navigations_status == 'Operativ':
         
         if ft == "Ausdauer":
             abc_dist *= 1.20
-            erw_text, sprint_text, sprint_satz, ausdauer_satz = "Erweiterte Shuttle-Aktivierung", "Erhalt-Sprints", "6 x 30m (60s Pause)", "5 x 150m (70% / 90s Pause)"
-            f_notiz = "ST-Dominanz: Laktattoleranz"
+            erw_text, sprint_text, ausdauer_satz = "Erweiterte Shuttle-Aktivierung", "Erhalt-Sprints", "5 x 150m (70% / 90s)"
         elif ft == "Schnelligkeit (Sprint)":
             abc_dist *= 0.90
-            erw_text, sprint_text, sprint_satz, ausdauer_satz = "ZNS-Aktivierung (Gepard)", "Max. Beschleunigung", "6 x 30m (180s Pause)", "2 x 100m (80% / 180s Pause)"
-            f_notiz = "Typ 2X/2XX Dominanz: Max. RFD"
+            erw_text, sprint_text, ausdauer_satz = "ZNS-Aktivierung (Gepard)", "Max. Beschleunigung", "2 x 100m (80% / 180s)"
         elif ft in ["Sprungkraft", "Gazelle"]:
-            erw_text, sprint_text, sprint_satz, ausdauer_satz = "Reaktiv-Aktivierung", "Fliegender Sprint", "5 x 40m (120s Pause)", "4 x 100m (75% / 120s Pause)"
-            f_notiz = "Elastische Speicherfähigkeit"
+            erw_text, sprint_text, ausdauer_satz = "Reaktiv-Aktivierung", "Fliegender Sprint", "4 x 100m (75% / 120s)"
         else:
             abc_dist *= 0.95
-            erw_text, sprint_text, sprint_satz, ausdauer_satz = "Kraft-Mobilisation", "Beschleunigung gegen Last", "4 x 40m (150s Pause)", "4 x 100m (70% / 150s Pause)"
-            f_notiz = "Typ 2A Dominanz: Mech. Last"
+            erw_text, sprint_text, ausdauer_satz = "Kraft-Mobilisation", "Beschleunigung gegen Last", "4 x 100m (70% / 150s)"
 
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
-        
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 1", "Geplant: Inhalt": "400m Shuttle einlaufen & STL-Läufe", "Geplant: Last": "0 kg", "IST: Ausgeführt": "400m Shuttle", "IST: Last/Wdh": "0 kg", "SBE": sbe_ziel})
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 2", "Geplant: Inhalt": f"Lauf-ABC ({abc_sets} x {abc_dist:.1f}m)", "Geplant: Last": stange_last, "IST: Ausgeführt": "Lauf-ABC absolviert", "IST: Last/Wdh": stange_last, "SBE": sbe_ziel})
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 3", "Geplant: Inhalt": "Reaktiv-Komplex (Shuttle & Squat-Stoß-Jumps)", "Geplant: Last": basis_last, "IST: Ausgeführt": "Reaktiv-Komplex", "IST: Last/Wdh": basis_last, "SBE": sbe_ziel})
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 4", "Geplant: Inhalt": "5 x 100m Tempoläufe (80% Vmax)", "Geplant: Last": "0 kg", "IST: Ausgeführt": "TL absolviert", "IST: Last/Wdh": "0 kg", "SBE": sbe_ziel})
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 5", "Geplant: Inhalt": "Unilaterale Sicherung & Leg Speed Curler", "Geplant: Last": "Mod. / 4 kg", "IST: Ausgeführt": "Curler absolviert", "IST: Last/Wdh": "Mod. / 4 kg", "SBE": sbe_ziel})
-        protokoll.append({"TE": f"TE {woche}", "Block": "Block 6", "Geplant: Inhalt": "Rumpf & Oberkörper (Einwurfcrunch & TRX)", "Geplant: Last": "5-7 kg Griffball", "IST: Ausgeführt": "Rumpf absolviert", "IST: Last/Wdh": "5-7 kg", "SBE": "SR 1"})
+
+        # Protokoll-Einträge mit Soll/Ist und Utensilien
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 1-2", 
+            "Inhalt / Trainingsmittel": "Erwärmung & Lauf-ABC", 
+            "Benötigte Utensilien": "Gewichtsstangen (1.5-3 kg)", 
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m", "Ist (Durchgeführt)": f"_____ x _____ m", 
+            "Soll-Last": stange_last, "Ist-Last / RPE": "_____ kg / SBE _____"
+        })
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 3", 
+            "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2)", 
+            "Benötigte Utensilien": "Speed Jumper, Power Bars, Hürtenset (55er)", 
+            "Soll (Geplant)": "4 Durchgänge / 12 Wdh.", "Ist (Durchgeführt)": "_____ Durchgänge", 
+            "Soll-Last": basis_last, "Ist-Last / RPE": "_____ kg / SBE _____"
+        })
+        protokoll.append({
+            "TE": f"TE {woche}", "Block": "Block 4-6", 
+            "Inhalt / Trainingsmittel": "Tempoläufe, Leg Speed Curler & Rumpf-Athletik", 
+            "Benötigte Utensilien": "Leg Speed Curler, Kettlebells (2-4 kg), Griffbälle (5-7 kg), TRX", 
+            "Soll (Geplant)": "Nach Tempotabelle / 3x22 Wdh.", "Ist (Durchgeführt)": "____________________", 
+            "Soll-Last": "Moderat", "Ist-Last / RPE": "_____ kg / SBE _____"
+        })
 
     df_proto = pd.DataFrame(protokoll)
     
-    # AUTOMATISIERTE MATERIAL- UND GERÄTELISTE
-    st.markdown("### 🛠️ Automatische Trainingsmittel- & Geräteretoure-Liste")
-    st.markdown("*Erforderliches Equipment für die selektierte Trainingseinheit (berechnet nach Team- und Materialmatrix):*")
-    
-    material_liste = [
-        {"Trainingsmittel / Equipment": "Aluminium-Gewichtsstangen (1.5 - 3.0 kg)", "Benötigte Anzahl": "1 Stange pro Athlet", "Spezifikation": "Für Lauf-ABC über Kopf"},
-        {"Trainingsmittel / Equipment": "Power Bars / Gewichtsstangen", "Benötigte Anzahl": "1 pro Athlet", "Spezifikation": f"Lastbereich: {basis_last}"},
-        {"Trainingsmittel / Equipment": "Griffbälle / Medizinbälle", "Benötigte Anzahl": "1 pro Station", "Spezifikation": "5-7 kg (für Einwurfcrunch)"},
-        {"Trainingsmittel / Equipment": "Leg Speed Curler", "Benötigte Anzahl": "Geräte-Platzzuweisung", "Spezifikation": "90% Amplitude (Ischiocrurale Sicherung)"},
-        {"Trainingsmittel / Equipment": "TRX-Schlingentrainer / Reck", "Benötigte Anzahl": "Entsprechend Gruppengröße", "Spezifikation": "Schrägliegehang"},
-        {"Trainingsmittel / Equipment": "Hürden / Markierungskegel", "Benötigte Anzahl": "8-12 Stück", "Spezifikation": "Für Shuttle-Beschleunigung & Lauf-ABC"}
-    ]
-    st.table(pd.DataFrame(material_liste))
-
-    st.markdown("---")
-
-    # CSV-DOWNLOAD FÜR PERFEKTEN EXCEL/DRUCK-EXPORT
+    # CSV-Download für sauberen, universellen Export ohne Fehler
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="📥 Trainingsprotokoll & Soll/Ist als CSV herunterladen (Excel-kompatibel)",
+        label="📥 Trainingsprotokoll & Utensilienliste als CSV herunterladen",
         data=csv_data,
         file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
         mime="text/csv"
