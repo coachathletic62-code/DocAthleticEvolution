@@ -1,22 +1,22 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - STREAMLIT WEB-MASTER (Synthese v18.30)
-# Visuelles Web-Design (Schwarz/Ellipsen) + Backend-Logik (v18.26) + Diagnostik (v18.28)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Synthese v18.31)
+# Statisches Logo-Routing (logo.png) + Horizontale Steuerungsmatrix
 # =========================================================================
 import streamlit as st
 import pandas as pd
 import math
 
 # 1. VISUELLE ARCHITEKTUR & GRUNDEINSTELLUNGEN
-st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Doc Athletic Evolution", layout="wide")
 
 st.markdown("""
 <style>
     .stApp {
-        background-color: #0b0c10;
-        color: #c5c6c7;
+        background-color: #000000;
+        color: #ffffff;
     }
     h1, h2, h3, h4, h5, h6, p, div, span, label, th, td {
-        color: #c5c6c7 !important;
+        color: #ffffff !important;
     }
     .stButton>button {
         background-color: #1f2833;
@@ -26,28 +26,11 @@ st.markdown("""
         width: 100%;
         font-weight: bold;
     }
-    .ellipse-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 350px;
-        margin-top: 50px;
-    }
-    .ellipse {
-        width: 400px;
-        height: 200px;
-        background: transparent;
-        border: 4px solid #66fcf1;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 36px;
-        font-weight: bold;
-        color: #66fcf1;
-        box-shadow: 0 0 25px #45a29e;
-        text-transform: uppercase;
-        letter-spacing: 2px;
+    .steuermatrix {
+        background-color: #111111;
+        border: 2px solid #333333;
+        border-radius: 5px;
+        padding: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -59,7 +42,7 @@ if 'navigations_status' not in st.session_state:
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
 
-# 3. KADER-DATENBANK & PARAMETER (Aus Version 18.26)
+# 3. KADER-DATENBANK & PARAMETER
 kader = {
     "Matilda Karnik": {"alter": 14, "profil": "Fussball_U15_w", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler"},
     "Ronja Borchmeyer": {"alter": 15, "profil": "Fussball_U17_w", "fasertyp": "Sprungkraft", "reife": "Normalentwickler"},
@@ -107,15 +90,23 @@ def ermittle_basis_50m(profil, ft, reife):
     return round(basis, 2)
 
 # =========================================================================
-# EBENE 1: STARTBILDSCHIRM (Mit CSS-Ellipsen Logo)
+# EBENE 1: STARTBILDSCHIRM
 # =========================================================================
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 20px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
-    st.markdown("<div class='ellipse-container'><div class='ellipse'>Train Smart</div></div>", unsafe_allow_html=True)
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
     
+    # Statischer Bildaufruf
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        try:
+            st.image("logo.png", use_container_width=True)
+        except:
+            st.markdown("<div style='text-align: center; color: #ea580c; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf dem Server nicht gefunden werden. Bitte Verzeichnis prüfen.</div>", unsafe_allow_html=True)
+            
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
 
 # =========================================================================
@@ -124,8 +115,7 @@ if st.session_state.navigations_status == 'Start':
 elif st.session_state.navigations_status == 'Uebersicht':
     st.title("Systemübersicht & Status")
     st.markdown("---")
-    st.markdown("### Modul-Checkliste:")
-    st.write("✅ **Visuelle Architektur:** Geladen (Schwarzer Untergrund & CSS-Ellipsen aktiv)")
+    st.write("✅ **Visuelle Architektur:** Geladen (Schwarzer Untergrund & Direkte Bildverknüpfung aktiv)")
     st.write("✅ **Biometrische Datenbank:** Verbunden")
     st.write("✅ **Diagnostik-Prozessor:** Polynomische Regression (v18.28) aktiv")
     st.write("✅ **Makrozyklus-Generator:** Vollständige 14-Wochen-Logik (v18.26) aktiv")
@@ -139,31 +129,44 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.button("OPERATIVES MENÜ STARTEN >>", on_click=navigiere, args=('Operativ',))
 
 # =========================================================================
-# EBENE 3: OPERATIVES MENÜ
+# EBENE 3: OPERATIVE MASKE (Horizontales Layout analog Desktop-Version)
 # =========================================================================
 elif st.session_state.navigations_status == 'Operativ':
     st.button("<< ZUR ÜBERSICHT", on_click=navigiere, args=('Uebersicht',))
     st.title("🏃‍♂️ Operative Trainingssteuerung")
-    st.markdown("---")
-
-    # SEITENLEISTE
-    st.sidebar.header("⚙️ Biometrische Live-Steuerung")
-    ziel = st.sidebar.selectbox("Athlet/in wählen", list(kader.keys()) + list(abc_parameter.keys()))
     
-    if ziel in kader:
-        profil = kader[ziel]["profil"]
+    # HORIZONTALE STEUERUNGSMATRIX
+    st.markdown("<div class='steuermatrix'>", unsafe_allow_html=True)
+    st.markdown("### ⚙️ Live-Steuerungsleiste")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet", "Mannschaft / Kader"])
+        if modus == "Einzelathlet":
+            ziel = st.selectbox("Ziel (Name)", list(kader.keys()))
+        else:
+            ziel = st.selectbox("Ziel (Team)", list(abc_parameter.keys()))
+            
+    with c2:
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
-        ft = st.sidebar.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
         reife_liste = ["Spätentwickler", "Normalentwickler", "Frühentwickler"]
-        reife = st.sidebar.selectbox("Reife-Status", reife_liste, index=reife_liste.index(kader[ziel]["reife"]))
-    else:
-        profil = ziel
-        ft = st.sidebar.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"])
-        reife = st.sidebar.selectbox("Reife-Status", ["Spätentwickler", "Normalentwickler", "Frühentwickler"])
-    
-    te_wahl = st.sidebar.selectbox("Trainingseinheit (TE)", ["Alle TEs (1-14)"] + [f"TE {i}" for i in range(1, 15)])
-    vorgaben = abc_parameter.get(profil, {"sets": 4, "start_m": 16.0, "step_m": 2.0, "sbe_ziel": "SR 2"})
-    sbe_ziel = st.sidebar.text_input("SBE (Saubere Reserve)", vorgaben["sbe_ziel"])
+        
+        if ziel in kader:
+            profil = kader[ziel]["profil"]
+            ft = st.selectbox("Fasertyp", ft_liste, index=ft_liste.index(kader[ziel]["fasertyp"]))
+            reife = st.selectbox("Reife-Status", reife_liste, index=reife_liste.index(kader[ziel]["reife"]))
+        else:
+            profil = ziel
+            ft = st.selectbox("Fasertyp", ft_liste)
+            reife = st.selectbox("Reife-Status", reife_liste)
+            
+    with c3:
+        te_wahl = st.selectbox("Trainingseinheit (TE)", ["Alle TEs (1-14)"] + [f"TE {i}" for i in range(1, 15)])
+        vorgaben = abc_parameter.get(profil, {"sets": 4, "start_m": 16.0, "step_m": 2.0, "sbe_ziel": "SR 2"})
+        sbe_ziel = st.text_input("SBE (Saubere Reserve)", vorgaben["sbe_ziel"])
+        
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("---")
 
     basis_50m = ermittle_basis_50m(profil, ft, reife)
 
@@ -191,7 +194,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # TEMPOTABELLEN (Logik aus v18.26)
+    # TEMPOTABELLEN
     st.subheader(f"⏱ Tempotabellen (Biometrisch gekoppelt: {basis_50m}s)")
     def format_time(seconds):
         if seconds >= 60:
@@ -212,7 +215,6 @@ elif st.session_state.navigations_status == 'Operativ':
     # TRAININGSPLAN GENERIERUNG (Logik v18.26)
     st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel}")
     
-    # Lastberechnung
     def calc_last(base_str, is_gross):
         if reife == "Spätentwickler":
             return f"Reduziert (-30%)" if is_gross else f"Reduziert (-20%)"
@@ -262,7 +264,6 @@ elif st.session_state.navigations_status == 'Operativ':
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         stange_notiz = f"Stange über Kopf | {f_notiz}" if woche <= 6 else f"Ohne Zusatzlast | {f_notiz}"
 
-        # Standard-Blöcke
         protokoll.append({"TE": f"TE {woche}", "Phase": "Erwärmung", "Trainingsmittel": erw_text, "Sätze/Wdh": "1 x 800m", "Soll-Last": "0 kg", "SBE": sbe_ziel, "Notiz": "Intensität: Moderat"})
         protokoll.append({"TE": f"TE {woche}", "Phase": "Speed Drills", "Trainingsmittel": sprint_text, "Sätze/Wdh": sprint_satz, "Soll-Last": stange_last, "SBE": sbe_ziel, "Notiz": stange_notiz})
         protokoll.append({"TE": f"TE {woche}", "Phase": "Lauf-ABC", "Trainingsmittel": "Kniehebe, Anfersen", "Sätze/Wdh": f"{abc_sets} x {abc_dist:.1f} m", "Soll-Last": stange_last, "SBE": sbe_ziel, "Notiz": "Technik-Fokus"})
