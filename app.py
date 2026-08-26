@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.68)
-# Architektur: 3-Stufig | Engine: Direkte Ist-Eingabe, 150m-Live-Korrelation & Workflow-Fix
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.69)
+# Architektur: 3-Stufig | Engine: Direkte TE-Inhalts-Bearbeitung, Live-Korrelation & Workflow-Fix
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -75,6 +75,9 @@ if 'kader_db' not in st.session_state:
 
 if 'ist_protokoll' not in st.session_state:
     st.session_state.ist_protokoll = {}
+
+if 'te_anpassungen' not in st.session_state:
+    st.session_state.te_anpassungen = {}
 
 if 'folgemakro_speicher' not in st.session_state:
     st.session_state.folgemakro_speicher = {}
@@ -188,7 +191,7 @@ elif st.session_state.navigations_status == 'Operativ':
     
     auto_150 = round(t_60 * 2.375, 2)
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=auto_150, step=0.01)
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
         col_bs1, col_bs2 = st.columns(2)
@@ -241,7 +244,7 @@ elif st.session_state.navigations_status == 'Operativ':
                     "profil": neu_profil,
                     "fasertyp": neu_ft,
                     "reife": neu_reife,
-                    "sbe": sbe_ziel,
+                    "sbe": neu_sbe,
                     "t_60": float(neu_t60),
                     "t_150": float(neu_t150)
                 }
@@ -341,58 +344,68 @@ elif st.session_state.navigations_status == 'Operativ':
         abc_dist = round(raw_dist * 2) / 2
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
+        # Individuelle TE-Anpassung, falls überarbeitet
+        te_key = f"{ziel}_TE_{woche}_inhalt"
+        standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
+        aktiver_inhalt = st.session_state.te_anpassungen.get(te_key, standard_inhalt)
+
+        key_ist = f"{ziel}_TE_{woche}_ist"
+        ist_wert = st.text_input(f"TE {woche} - Tatsächlich durchgeführt", value=st.session_state.ist_protokoll.get(key_ist, f"TE {woche} planmäßig durchgeführt"), key=key_ist)
+        st.session_state.ist_protokoll[key_ist] = ist_wert
+
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 1", 
             "Inhalt / Trainingsmittel": "Allg. & Spez. Erwärmung: Adaptives Shuttle einlaufen, STL-Läufe", 
             "Benötigte Utensilien": "Hütchen, Markierungsschienen", 
-            "Soll (Geplant)": "1 x 400m + STL", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": "1 x 400m + STL", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 2", 
-            "Inhalt / Trainingsmittel": "Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)", 
+            "Inhalt / Trainingsmittel": aktiver_inhalt, 
             "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
             "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle & Squat-Jumps)", 
             "Benötigte Utensilien": f"Speed Jumper, Power Bars ({basis_last}), 55er Hürtenset", 
-            "Soll (Geplant)": "4 Durchgänge / 12 Wdh. (Folgematrix)", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": "4 Durchgänge / 12 Wdh. (Folgematrix)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 4", 
             "Inhalt / Trainingsmittel": "Spezifischer Laufumfang (Tempoläufe nach adaptierter Tempotabelle)", 
             "Benötigte Utensilien": "Messband / Stoppuhr", 
-            "Soll (Geplant)": f"5 x 100m TL ({calc_100}s Basis)", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": f"5 x 100m TL ({calc_100}s Basis)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 5", 
             "Inhalt / Trainingsmittel": "Unilaterale Belastung & Ischiocrurale Sicherung", 
             "Benötigte Utensilien": "Leg Speed Curler, Kettlebells (2-4 kg)", 
-            "Soll (Geplant)": "3 x 22 Wdh. L/R", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": "3 x 22 Wdh. L/R", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 6", 
             "Inhalt / Trainingsmittel": "Rumpf- & Oberkörper-Athletik", 
             "Benötigte Utensilien": "Griffbälle (5-7 kg), TRX-Bänder", 
-            "Soll (Geplant)": "3 Durchgänge", "Tatsächlich Ist": "Planmäßig"
+            "Soll (Geplant)": "3 Durchgänge", "Tatsächlich Ist": ist_wert
         })
 
     df_proto = pd.DataFrame(protokoll)
 
-    # DIREKTE BEARBEITUNGSMÖGLICHKEIT IM 3-SCHRITTE WORKFLOW
+    # 3-SCHRITTE WORKFLOW MIT VOLLSTÄNDIG INTERAKTIVER TE-ÜBERARBEITUNG
     st.markdown("### ⚙️ Operativer 3-Schritte Protokoll-Workflow")
     
-    with st.expander("✏️ 1. Soll/Ist-Protokoll direkt überarbeiten (Ist-Werte pro Einheit eintragen)", expanded=True):
+    with st.expander("✏️ 1. Soll/Ist-Protokoll & TE-Inhalte überarbeiten", expanded=True):
         col_ed1, col_ed2 = st.columns(2)
         with col_ed1:
-            ed_te = st.selectbox("Trainingseinheit für Ist-Eintrag", [f"TE {i}" for i in range(1, 15)], key="ed_te_sel")
+            ed_te_num = st.selectbox("Trainingseinheit wählen", [f"TE {i}" for i in range(1, 15)], key="ed_te_box")
         with col_ed2:
-            ed_val = st.text_input("Tatsächlich durchgeführter Wert / Anpassung", value=st.session_state.ist_protokoll.get(ed_te, "Planmäßig durchgeführt"), key="ed_val_input")
+            neuer_inhalt = st.text_input("Inhalt / Disziplin anpassen (z.B. 60m Test / Lauf-ABC)", value=aktiver_inhalt, key="ed_inhalt_input")
             
-        if st.button("💾 Ist-Wert für diese Einheit speichern"):
-            st.session_state.ist_protokoll[ed_te] = ed_val
-            st.success(f"Eintrag für {ed_te} erfolgreich als Ist-Wert gespeichert.")
+        if st.button("💾 TE-Inhalt permanent aktualisieren"):
+            st.session_state.te_anpassungen[f"{ziel}_{ed_te_num}_inhalt"] = neuer_inhalt
+            st.success(f"{ed_te_num} erfolgreich aktualisiert.")
+            st.rerun()
 
     col_w2, col_w3 = st.columns(2)
     with col_w2:
