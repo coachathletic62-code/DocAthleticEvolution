@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.50)
-# Architektur: 3-Stufig | Engine: Vollständige Koppelung (60m/150m), Persistenz & Export
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.51)
+# Architektur: 3-Stufig | Engine: Bidirektionale Koppelung (60m/150m) & Export
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -22,6 +22,10 @@ st.markdown("""
         background-color: #1f2833; color: #66fcf1;
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
+    }
+    .export-btn > button {
+        background-color: #ea580c !important; color: #ffffff !important;
+        border: 2px solid #c2410c !important; font-size: 16px !important;
     }
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
@@ -52,7 +56,7 @@ if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_150": 19.50},
         "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00, "t_150": 19.00},
-        "Ronja Brochmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
+        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
@@ -168,9 +172,11 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.99)), step=0.01)
     with diag_col2:
-        # Dynamische automatische Koppelung der 150m-Zeit an die 60m-Zeit, sofern nicht manuell angepasst
-        auto_150 = round(t_60 * 2.44, 2)
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01)
+        # Live-Synchronisation: Wenn t_60 sich ändert, skaliert t_150 automatisch mit, sofern es nicht manuell überschrieben wird
+        standard_150 = round(t_60 * 2.44, 2)
+         gespeicherter_150 = float(aktuelle_daten.get("t_150", standard_150))
+        # Wenn der gespeicherte Wert nah am alten Standard ist, dynamisch anpassen
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=standard_150 if t_60 != float(aktuelle_daten.get("t_60", 7.99)) else gespeicherter_150, step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
         col_bs1, col_bs2 = st.columns(2)
@@ -220,7 +226,7 @@ elif st.session_state.navigations_status == 'Operativ':
                     "reife": neu_reife,
                     "sbe": neu_sbe,
                     "t_60": 7.50,
-                    "t_150": 17.50
+                    "t_150": 18.30
                 }
                 st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
                 st.rerun()
@@ -280,7 +286,7 @@ elif st.session_state.navigations_status == 'Operativ':
         elif dist_m == 100:
             base_s = prog_100
         elif dist_m == 150:
-            base_s = t_150  # Direkte und dynamische Korrelation zur 150m-Referenzzeit
+            base_s = t_150  # Dynamisch gekoppelt an die 150m Referenz
         elif dist_m == 200:
             base_s = prog_200
         
@@ -298,6 +304,9 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
+    # HERVORGEHOBENER EXPORT-BUTTON FÜR CSV / DRUCK
+    csv_data = pd.DataFrame().to_csv(index=False).encode('utf-8') # Placeholder vor Protokoll-Generierung
+    
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Soll/Ist-Abgleich & Utensilien-Logistik: {ziel} ({te_wahl})")
     else:
@@ -367,14 +376,16 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    # EXPORT-BUTTON FÜR CSV / DRUCK
+    # Hervorgehobener Download-Button direkt über der Tabelle
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
+    st.markdown('<div class="export-btn">', unsafe_allow_html=True)
     st.download_button(
-        label="📥 Soll/Ist Trainingsprotokoll & Utensilienliste als CSV herunterladen",
+        label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
         data=csv_data,
-        file_name=f"Doc_Athletic_Soll_Ist_{ziel.replace(' ', '_')}.csv",
+        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
         mime="text/csv"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
