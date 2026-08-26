@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.52)
-# Architektur: 3-Stufig | Engine: Syntax- & Indentation-Fix in Zeile 177
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.54)
+# Architektur: 3-Stufig | Engine: Leichtathletik U14/U15 Profile, Eingabe-Fix & Export
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -23,9 +23,9 @@ st.markdown("""
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    .export-btn > button {
-        background-color: #ea580c !important; color: #ffffff !important;
-        border: 2px solid #c2410c !important; font-size: 16px !important;
+    .export-container {
+        background-color: #1f2833; border: 3px solid #ea580c;
+        padding: 15px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px; text-align: center;
     }
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
@@ -56,7 +56,7 @@ if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20, "t_150": 19.50},
         "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00, "t_150": 19.00},
-        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
+        "Ronja Brochmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
         "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
@@ -84,6 +84,8 @@ abc_parameter = {
     "Fussball_U23_w": {"sets": 6, "start_m": 25.0, "step_m": 2.5, "sbe_ziel": "SR 1-0"},
     "Basketball_U17_m": {"sets": 5, "start_m": 20.0, "step_m": 3.0, "sbe_ziel": "SR 2"},
     "Basketball_U17_w": {"sets": 5, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
+    "Leichtathletik_U14": {"sets": 4, "start_m": 15.0, "step_m": 2.0, "sbe_ziel": "SR 2-3"},
+    "Leichtathletik_U15": {"sets": 4, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
     "Leichtathletik_U17_m": {"sets": 5, "start_m": 25.0, "step_m": 3.5, "sbe_ziel": "SR 1-2"},
     "Leichtathletik_U17_w": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1-2"},
     "Skispringen_U20": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
@@ -200,18 +202,25 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # NEUEN ATHLETEN ANLEGEN (Mit Übernahme der echten Eingaben)
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
-        neu_name = st.text_input("Vollständiger Name")
+        neu_name = st.text_input("Vollständiger Name (z.B. Franziska)")
         nc1, nc2, nc3 = st.columns(3)
         with nc1:
-            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=18, key="n_alt")
-            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
+            neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=13, key="n_alt")
+            neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.65, step=0.01, key="n_gro")
         with nc2:
             neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
-            neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft")
+            neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft", index=4)
         with nc3:
             neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei")
             neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
+            
+        nc_z1, nc_z2 = st.columns(2)
+        with nc_z1:
+            neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.90, step=0.01, key="n_t60")
+        with nc_z2:
+            neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.50, step=0.01, key="n_t150")
             
         if st.button("Athlet anlegen & in Datenbank verankern"):
             if neu_name.strip():
@@ -222,10 +231,10 @@ elif st.session_state.navigations_status == 'Operativ':
                     "fasertyp": neu_ft,
                     "reife": neu_reife,
                     "sbe": neu_sbe,
-                    "t_60": 7.50,
-                    "t_150": 18.30
+                    "t_60": float(neu_t60),
+                    "t_150": float(neu_t150)
                 }
-                st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
+                st.success(f"Athlet {neu_name.strip()} erfolgreich mit 60m={neu_t60}s angelegt.")
                 st.rerun()
             else:
                 st.error("Bitte einen gültigen Namen eingeben.")
@@ -301,6 +310,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
+    # SEHR MARKanter, FIXIERTER EXPORT-BEREICH FÜR WLAN / DRUCK
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Soll/Ist-Abgleich & Utensilien-Logistik: {ziel} ({te_wahl})")
     else:
@@ -370,8 +380,9 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
+    # Fixierter, markanter Export-Container oben vor der Tabelle
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
-    st.markdown('<div class="export-btn">', unsafe_allow_html=True)
+    st.markdown('<div class="export-container">', unsafe_allow_html=True)
     st.download_button(
         label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
         data=csv_data,
