@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.69)
-# Architektur: 3-Stufig | Engine: Direkte TE-Inhalts-Bearbeitung, Live-Korrelation & Workflow-Fix
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.70)
+# Architektur: 3-Stufig | Engine: Integrierter Passwortschutz (Leseschutz & Testmodus)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -55,10 +55,31 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# PASSWORT-SCHutz (Mastercode definieren)
+MASTER_PASSWORT = "docathletic2026"
+
+if 'authentifiziert' not in st.session_state:
+    st.session_state.authentifiziert = False
+
+if not st.session_state.authentifiziert:
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 100px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7;'>Geschützter Bereich - Bitte Mastercode eingeben</p>", unsafe_allow_html=True)
+    
+    col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
+    with col_p2:
+        eingabe_pw = st.text_input("Mastercode", type="password")
+        if st.button("ZUGRIFF FREISCHALTEN"):
+            if eingabe_pw == MASTER_PASSWORT:
+                st.session_state.authentifiziert = True
+                st.rerun()
+            else:
+                st.error("Falscher Code. Zugriff verweigert.")
+    st.stop()
+
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
-# Unverrückbare Kader-Datenbank (Christoffer Danders mit K und Doppel-F fixiert)
+# Unverrückbare Kader-Datenbank
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -184,7 +205,6 @@ elif st.session_state.navigations_status == 'Operativ':
         te_wahl = st.selectbox("Trainingseinheit (TE)", [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"])
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"])
         
-    # ECHTE LIVE-KORRELATION FÜR 60m UND 150m (Faktor 2.375)
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01)
@@ -239,12 +259,12 @@ elif st.session_state.navigations_status == 'Operativ':
         if st.button("Athlet anlegen & in Datenbank verankern"):
             if neu_name.strip():
                 st.session_state.kader_db[neu_name.strip()] = {
-                    "alter": int(neu_alter),
-                    "groesse": float(neu_groesse),
+                    "alter": int(alter),
+                    "groesse": float(groesse),
                     "profil": neu_profil,
                     "fasertyp": neu_ft,
-                    "reife": neu_reife,
-                    "sbe": neu_sbe,
+                    "reife": reife,
+                    "sbe": sbe_ziel,
                     "t_60": float(neu_t60),
                     "t_150": float(neu_t150)
                 }
@@ -344,7 +364,6 @@ elif st.session_state.navigations_status == 'Operativ':
         abc_dist = round(raw_dist * 2) / 2
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
 
-        # Individuelle TE-Anpassung, falls überarbeitet
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
         aktiver_inhalt = st.session_state.te_anpassungen.get(te_key, standard_inhalt)
@@ -392,7 +411,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
 
-    # 3-SCHRITTE WORKFLOW MIT VOLLSTÄNDIG INTERAKTIVER TE-ÜBERARBEITUNG
     st.markdown("### ⚙️ Operativer 3-Schritte Protokoll-Workflow")
     
     with st.expander("✏️ 1. Soll/Ist-Protokoll & TE-Inhalte überarbeiten", expanded=True):
