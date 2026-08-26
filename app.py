@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.55)
-# Architektur: 3-Stufig | Engine: Stabiler HTML-Export, Diagnostik-Chronologie & Layout-Fix
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.56)
+# Architektur: 3-Stufig | Engine: Biometrischer Entwicklungs-Faktor (Frühentwickler-Kompensation)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -228,8 +228,8 @@ elif st.session_state.navigations_status == 'Operativ':
         if st.button("Athlet anlegen & in Datenbank verankern"):
             if neu_name.strip():
                 st.session_state.kader_db[neu_name.strip()] = {
-                    "alter": int(neu_alter),
-                    "groesse": float(neu_groesse),
+                    "alter": int(alter),
+                    "groesse": float(groesse),
                     "profil": neu_profil,
                     "fasertyp": neu_ft,
                     "reife": neu_reife,
@@ -254,7 +254,7 @@ elif st.session_state.navigations_status == 'Operativ':
     if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
     elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
-    # CHRONOLOGISCHE ANORDNUNG: Links = Aktuelle Ist-Korrelation | Rechts = 12-Monats-Prognosekorridor
+    # CHRONOLOGISCHE ANORDNUNG & FRÜHENTWICKLER-FAKTOR (Akzeleriert)
     res_col1, res_col2 = st.columns(2)
     
     with res_col1:
@@ -264,21 +264,25 @@ elif st.session_state.navigations_status == 'Operativ':
                 akt_100 = 12.61 + ((t_60 - 7.99) * 2.55)
                 akt_200 = 27.00 + ((t_60 - 7.99) * 5.0)
             else:
-                akt_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * 0.975
+                komp_100 = 0.975
+                akt_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * komp_100
                 akt_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * 0.968
             st.write(f"➡️ 60m: **{t_60:.2f} s** | 100m (Basis): **{akt_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{akt_200:.2f} s**")
 
     with res_col2:
         st.markdown("#### 🎯 12-Monats-Entwicklungsprognose")
         if t_150 > 0:
+            # Berücksichtigung des Entwicklungsstatus (Frühentwickler erhalten leistungsgerechten Progressionsfaktor)
+            prog_faktor = 0.95 if reife == "Frühentwickler (Akzeleriert)" else 0.98 if reife == "Spätentwickler (Retardiert)" else 0.965
+            
             if "_w" in profil_soll:
-                p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98 
-                p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * 1.045
-                p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * 1.060
+                p_100 = ((-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * 0.98) * prog_faktor
+                p_200 = ((12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * 1.045) * prog_faktor
+                p_300 = ((-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * 1.060) * prog_faktor
             else:
-                p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) 
-                p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) 
-                p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2)))
+                p_100 = (-2.4964 + (0.9996 * t_150) - (0.0103 * (t_150**2))) * prog_faktor
+                p_200 = (12.5421 - (0.0950 * t_150) + (0.0413 * (t_150**2))) * prog_faktor
+                p_300 = (-7.8060 + (2.6981 * t_150) - (0.0031 * (t_150**2))) * prog_faktor
             st.write(f"➡️ Prognose 100m: **{p_100:.2f} s** | 200m: **{p_200:.2f} s** | 300m: **{p_300:.2f} s**")
 
     st.markdown("---")
@@ -385,18 +389,15 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    # SAUBERER HTML/BASE64 EXPORT-BUTTON (Garantiert sicht- und klickbar)
-    csv_bytes = df_proto.to_csv(index=False).encode('utf-8')
-    b64 = base64.b64encode(csv_bytes).decode()
-    download_filename = f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv"
-    
-    st.markdown(f"""
-    <div class="export-box">
-        <a href="data:file/csv;base64,{b64}" download="{download_filename}">
-            📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)
-        </a>
-    </div>
-    """, unsafe_allow_html=True)
+    csv_data = df_proto.to_csv(index=False).encode('utf-8')
+    st.markdown('<div class="export-box">', unsafe_allow_html=True)
+    st.download_button(
+        label="📥 SOLL/IST TRAININGSPROTOKOLL & UTENSILIENLISTE HERUNTERLADEN (DRUCKBEREIT)",
+        data=csv_data,
+        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
+        mime="text/csv"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
