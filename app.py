@@ -1,9 +1,10 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.43)
-# Architektur: 3-Stufig | Engine: Inklusion Doc Athletic Arbeitsphilosophie ("der andere Weg")
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.45)
+# Architektur: 3-Stufig | Engine: Korrektur Christopher Danders (1,78m, 27.03.2007, 12.3s / 40.5s)
 # =========================================================================
 import streamlit as st
 import pandas as pd
+import io
 import os
 
 st.set_page_config(page_title="Doc Athletic Evolution", layout="wide", initial_sidebar_state="collapsed")
@@ -23,13 +24,6 @@ st.markdown("""
         border: 2px solid #45a29e; border-radius: 8px;
         width: 100%; font-weight: bold;
     }
-    .druck-btn {
-        background-color: #ea580c; color: #ffffff; border: none; padding: 12px 20px;
-        font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer;
-        width: 100%; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase;
-    }
-    .druck-btn:hover { background-color: #c2410c; }
-    
     .steuermatrix {
         background-color: #111111; border: 2px solid #333333;
         border-radius: 5px; padding: 15px; margin-bottom: 20px;
@@ -49,15 +43,6 @@ st.markdown("""
     .druck-tabelle td { border: 1px solid #333333; padding: 8px; }
     .druck-tabelle tr:nth-child(even) { background-color: #0b0c10; }
     .druck-tabelle tr:nth-child(odd) { background-color: #111111; }
-
-    @media print {
-        .stButton, .stSelectbox, .stTextInput, .stNumberInput, .druck-btn, .philosophie-box, header, footer { display: none !important; }
-        .stApp { background-color: white !important; }
-        h1, h2, h3, h4, h5, h6, p, td { color: black !important; }
-        .druck-tabelle th { background-color: #dddddd !important; color: black !important; border: 1px solid black; }
-        .druck-tabelle td { border: 1px solid black; }
-        .steuermatrix { border: none; padding: 0; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +56,8 @@ if 'kader_db' not in st.session_state:
         "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10, "t_150": 19.20},
         "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30, "t_150": 19.80},
         "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40, "t_150": 20.00},
-        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20}
+        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20},
+        "Christopher Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30, "t_150": 16.80}
     }
 
 def navigiere(ziel):
@@ -206,6 +192,7 @@ elif st.session_state.navigations_status == 'Operativ':
     """, unsafe_allow_html=True)
 
     if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
+    elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
     res_col1, res_col2 = st.columns(2)
     with res_col1:
@@ -214,8 +201,9 @@ elif st.session_state.navigations_status == 'Operativ':
                 prog_100 = 12.61 + ((t_60 - 7.99) * 2.55)
                 prog_200 = 27.00 + ((t_60 - 7.99) * 5.0)
             else:
-                prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2)))
-                prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2)))
+                komp_100 = 0.975
+                prog_100 = (7.3829 - (0.4319 * t_60) + (0.1394 * (t_60**2))) * komp_100
+                prog_200 = (13.7955 - (0.7205 * t_60) + (0.2806 * (t_60**2))) * 0.968
             st.write(f"➡️ Prognose 100m (12-Monats-Korridor): **{prog_100:.2f} s** | 200m: **{prog_200:.2f} s**")
             
     with res_col2:
@@ -265,7 +253,14 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    st.markdown('<button onclick="window.print()" class="druck-btn">🖨️ Trainingsprotokoll drucken</button>', unsafe_allow_html=True)
+    # EXCEL-DOWNLOAD FÜR PERFEKTEN DRUCK
+    def to_excel(df):
+        output = io.BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        df.to_excel(writer, index=False, sheet_name='Trainingsprotokoll')
+        writer.close()
+        processed_data = output.getvalue()
+        return processed_data
 
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Operatives Trainingsprotokoll: {ziel} ({te_wahl})")
@@ -319,5 +314,14 @@ elif st.session_state.navigations_status == 'Operativ':
         protokoll.append({"TE": f"TE {woche}", "Modul / Block": "Block 6", "Inhalt / Trainingsmittel": "Rumpf- & Oberkörper-Athletik (Aufricht-Einwurfcrunch & TRX-Zug)", "Sätze x Wdh.": "3 Durchgänge", "Last": "5-7 kg Griffball", "SBE": "SR 1", "Notiz": "Tonus-Absenkung / Statische Dehnung"})
 
     df_proto = pd.DataFrame(protokoll)
+    
+    excel_data = to_excel(df_proto)
+    st.download_button(
+        label="📥 Trainingsprotokoll als Excel-Datei herunterladen (Für perfekten Druck)",
+        data=excel_data,
+        file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
     html_tabelle = df_proto.to_html(index=False, classes="druck-tabelle")
     st.markdown(html_tabelle, unsafe_allow_html=True)
