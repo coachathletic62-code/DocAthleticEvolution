@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.51)
-# Architektur: 3-Stufig | Engine: Bidirektionale Koppelung (60m/150m) & Export
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.52)
+# Architektur: 3-Stufig | Engine: Syntax- & Indentation-Fix in Zeile 177
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -172,10 +172,8 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.99)), step=0.01)
     with diag_col2:
-        # Live-Synchronisation: Wenn t_60 sich ändert, skaliert t_150 automatisch mit, sofern es nicht manuell überschrieben wird
         standard_150 = round(t_60 * 2.44, 2)
-         gespeicherter_150 = float(aktuelle_daten.get("t_150", standard_150))
-        # Wenn der gespeicherte Wert nah am alten Standard ist, dynamisch anpassen
+        gespeicherter_150 = float(aktuelle_daten.get("t_150", standard_150))
         t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=standard_150 if t_60 != float(aktuelle_daten.get("t_60", 7.99)) else gespeicherter_150, step=0.01)
 
     if modus == "Einzelathlet / Einzelathletin":
@@ -202,7 +200,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # NEUEN ATHLETEN ANLEGEN
     with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
         neu_name = st.text_input("Vollständiger Name")
         nc1, nc2, nc3 = st.columns(3)
@@ -286,7 +283,7 @@ elif st.session_state.navigations_status == 'Operativ':
         elif dist_m == 100:
             base_s = prog_100
         elif dist_m == 150:
-            base_s = t_150  # Dynamisch gekoppelt an die 150m Referenz
+            base_s = t_150
         elif dist_m == 200:
             base_s = prog_200
         
@@ -304,9 +301,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
 
-    # HERVORGEHOBENER EXPORT-BUTTON FÜR CSV / DRUCK
-    csv_data = pd.DataFrame().to_csv(index=False).encode('utf-8') # Placeholder vor Protokoll-Generierung
-    
     if te_wahl != "Alle TEs (1-14)":
         st.subheader(f"📋 Soll/Ist-Abgleich & Utensilien-Logistik: {ziel} ({te_wahl})")
     else:
@@ -376,7 +370,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     df_proto = pd.DataFrame(protokoll)
     
-    # Hervorgehobener Download-Button direkt über der Tabelle
     csv_data = df_proto.to_csv(index=False).encode('utf-8')
     st.markdown('<div class="export-btn">', unsafe_allow_html=True)
     st.download_button(
