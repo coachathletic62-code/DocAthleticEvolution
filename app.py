@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.90)
-# Architektur: Vollständige System-Synthese | Korrigierter Tempolauf-Start (75m) & Speed Jumper GZ
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.91)
+# Architektur: Vollständige System-Synthese | Exakte +1 Wdh. Progression & Lasten-Kompensation
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -81,7 +81,6 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
-# Feste Kader-Datenbank mit exakten anthropometrischen Daten[cite: 1]
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -301,16 +300,31 @@ elif st.session_state.navigations_status == 'Operativ':
     else:
         st.subheader(f"📋 Vollständiger Makrozyklus & Adaptive Ist-Rückkopplung: {ziel}")
         
-    def calc_last(base_str, is_gross):
-        if reife_intern == "Spätentwickler":
-            return f"Reduziert (-30%)" if is_gross else f"Reduziert"
-        elif reife_intern == "Frühentwickler":
-            return f"Erhöht (+15%)"
-        return base_str
-        
-    basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil_soll else "2-3 kg" if "U13" in profil_soll else "3-5 kg" if "U15_w" in profil_soll else "4-6 kg" if "U15_m" in profil_soll else "5-8 kg" if "U17_w" in profil_soll else "10-12 kg"
-    basis_last = calc_last(basis_last, True)
-    stangen_gewicht = calc_last("1 kg" if "U11" in profil_soll else "2 kg" if "U15" in profil_soll else "3 kg", False)
+    def get_power_bar_last(p_soll, reife_i):
+        # Exakte Lastzuweisung für Power Bars & Squat-Stoß-Jumps
+        if "U11" in p_soll:
+            base = "1-2 kg"
+        elif "U13" in p_soll:
+            base = "2-3 kg"
+        elif "U15_w" in p_soll:
+            base = "3-4 kg"
+        elif "U15_m" in p_soll:
+            base = "4-5 kg"
+        elif "U17" in p_soll or "U19" in p_soll:
+            base = "5-8 kg"
+        else:
+            base = "8-12 kg"
+            
+        if reife_i == "Spätentwickler":
+            return f"{base} (Reduziert)"
+        elif reife_i == "Frühentwickler":
+            return f"{base} (Erhöht)"
+        return base
+
+    basis_last = get_power_bar_last(profil_soll, reife_intern)
+    stangen_gewicht = "1 kg" if "U11" in profil_soll else "2 kg" if "U15" in profil_soll else "3 kg"
+    if reife_intern == "Spätentwickler": stangen_gewicht += " (Reduziert)"
+    
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     
@@ -322,11 +336,10 @@ elif st.session_state.navigations_status == 'Operativ':
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         
         curler_wdh = 20 + (woche - 1) * 1
-        jumps_wdh = 10 + ((woche - 1) // 2)
+        jumps_wdh = 10 + (woche - 1) * 1  # Exakt +1 Wiederholung pro Trainingseinheit (TE 1=10, TE 4=13)
         
-        # Tempoläufe ab 75m Start in TE 1 und periodisierter Anstieg
         tl_saetze = 4 if int(alter) <= 14 else 5
-        tl_distanz = 75 + ((woche - 1) // 2) * 15  # Startet bei 75m, steigt sauber an
+        tl_distanz = 75 + ((woche - 1) // 2) * 15
         if tl_distanz > 150: tl_distanz = 150
         
         te_key = f"{ziel}_TE_{woche}_inhalt"
@@ -399,7 +412,7 @@ elif st.session_state.navigations_status == 'Operativ':
             label="📥 CSV HERUNTERLADEN",
             data=csv_data,
             file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
-            mime="text/css", # Korrigiert zu text/csv
+            mime="text/csv",
             key="download_btn_safe"
         )
         
@@ -414,14 +427,14 @@ elif st.session_state.navigations_status == 'Operativ':
             st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     # -------------------------------------------------------------------------
-    # DIE 16px DRUCKMATRIX-RENDERLOGIK MIT KORRIGIERTEN TEMPOLÄUFEN & SPEED JUMPER GZ
+    # DIE 16px DRUCKMATRIX-RENDERLOGIK
     # -------------------------------------------------------------------------
     html_matrices = ""
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         curler_wdh = 20 + (woche - 1) * 1
-        jumps_wdh = 10 + ((woche - 1) // 2)
+        jumps_wdh = 10 + (woche - 1) * 1
         tl_saetze = 4 if int(alter) <= 14 else 5
         tl_distanz = 75 + ((woche - 1) // 2) * 15
         if tl_distanz > 150: tl_distanz = 150
@@ -445,7 +458,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="px; border: 1px solid #000; color: #000000 !important;">{basis_last} Power Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
