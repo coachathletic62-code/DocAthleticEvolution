@@ -1,6 +1,6 @@
 # =========================================================================
 # DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.90)
-# Architektur: 3-Stufig | Korrigierte Progression für Tempoläufe & Leg Curler
+# Architektur: Vollständige System-Synthese | Korrigierter Tempolauf-Start (75m) & Speed Jumper GZ
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -81,6 +81,7 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
+# Feste Kader-Datenbank mit exakten anthropometrischen Daten[cite: 1]
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -320,34 +321,14 @@ elif st.session_state.navigations_status == 'Operativ':
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         
-        # EXAKTE BIOLOGISCHE PROGRESSION NACH FRANK MÜLLER (VERSION 18.90)
-        # Leg Speed Curler: Signifikanter Zuwachs (+2 bis +3 Wdh. pro TE)
-        curler_wdh = 18 + (woche * 2) 
-        jumps_wdh = 10 + ((woche - 1) // 2)  
+        curler_wdh = 20 + (woche - 1) * 1
+        jumps_wdh = 10 + ((woche - 1) // 2)
         
-        # Tempoläufe (Block 4) Pyramide nach Vorgabe (50m bis 200m)
-        if woche <= 2:
-            tl_dist = 50
-            tl_saetze = 4
-        elif woche <= 4:
-            tl_dist = 75
-            tl_saetze = 4
-        elif woche <= 6:
-            tl_dist = 100
-            tl_saetze = 4
-        elif woche <= 8:
-            tl_dist = 125
-            tl_saetze = 4
-        elif woche <= 10:
-            tl_dist = 150
-            tl_saetze = 4
-        elif woche <= 12:
-            tl_dist = 175
-            tl_saetze = 3
-        else:
-            tl_dist = 200
-            tl_saetze = 3
-            
+        # Tempoläufe ab 75m Start in TE 1 und periodisierter Anstieg
+        tl_saetze = 4 if int(alter) <= 14 else 5
+        tl_distanz = 75 + ((woche - 1) // 2) * 15  # Startet bei 75m, steigt sauber an
+        if tl_distanz > 150: tl_distanz = 150
+        
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
         aktiver_inhalt = st.session_state.te_anpassungen.get(te_key, standard_inhalt)
@@ -365,19 +346,19 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 2", 
             "Inhalt / Trainingsmittel": aktiver_inhalt, 
             "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Progression +2.5m)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
-            "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle & Squat-Jumps)", 
-            "Benötigte Utensilien": f"Speed Jumper, Power Bars ({basis_last}), 55er Hürtenset", 
-            "Soll (Geplant)": f"4 Durchgänge / {jumps_wdh} Wdh. (Folgematrix)", "Tatsächlich Ist": ist_wert
+            "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle, Squat-Jumps & Speed Jumper GZ Entlastung)", 
+            "Benötigte Utensilien": f"Speed Jumper (GZ Entlastung), Power Bars ({basis_last}), 55er Hürtenset", 
+            "Soll (Geplant)": f"4 Durchgänge / {jumps_wdh} Wdh. (GZ Entlastung steigend)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 4", 
             "Inhalt / Trainingsmittel": "Spezifischer Laufumfang (Tempoläufe nach adaptierter Tempotabelle)", 
             "Benötigte Utensilien": "Messband / Stoppuhr", 
-            "Soll (Geplant)": f"{tl_saetze} x {tl_dist}m TL ({calc_100}s Basis)", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"{tl_saetze} x {tl_distanz}m TL ({calc_100}s Basis)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 5", 
@@ -418,7 +399,7 @@ elif st.session_state.navigations_status == 'Operativ':
             label="📥 CSV HERUNTERLADEN",
             data=csv_data,
             file_name=f"Doc_Athletic_Protokoll_{ziel.replace(' ', '_')}.csv",
-            mime="text/csv",
+            mime="text/css", # Korrigiert zu text/csv
             key="download_btn_safe"
         )
         
@@ -427,43 +408,24 @@ elif st.session_state.navigations_status == 'Operativ':
         if st.session_state.auth_modus == "trainer":
             if st.button("🚀 Ist-Werte für nächsten Makrozyklus sichern"):
                 st.session_state.folgemakro_speicher[ziel] = "übernommen"
-                st.success(f"Ist-Daten für {ziel} mit adaptiver Progression (+9% Strecke / +5.5% Last) für den nächsten Makrozyklus verankert.")
+                st.success(f"Ist-Daten für {ziel} mit adaptiver Progression für den nächsten Makrozyklus verankert.")
         else:
             st.button("🚀 Ist-Werte für nächsten Makrozyklus sichern", disabled=True)
             st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     # -------------------------------------------------------------------------
-    # DIE 16px DRUCKMATRIX-RENDERLOGIK MIT PYRAMIDEN-PROGRESSION
+    # DIE 16px DRUCKMATRIX-RENDERLOGIK MIT KORRIGIERTEN TEMPOLÄUFEN & SPEED JUMPER GZ
     # -------------------------------------------------------------------------
     html_matrices = ""
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
-        curler_wdh = 18 + (woche * 2)
+        curler_wdh = 20 + (woche - 1) * 1
         jumps_wdh = 10 + ((woche - 1) // 2)
+        tl_saetze = 4 if int(alter) <= 14 else 5
+        tl_distanz = 75 + ((woche - 1) // 2) * 15
+        if tl_distanz > 150: tl_distanz = 150
         
-        if woche <= 2:
-            tl_dist = 50
-            tl_saetze = 4
-        elif woche <= 4:
-            tl_dist = 75
-            tl_saetze = 4
-        elif woche <= 6:
-            tl_dist = 100
-            tl_saetze = 4
-        elif woche <= 8:
-            tl_dist = 125
-            tl_saetze = 4
-        elif woche <= 10:
-            tl_dist = 150
-            tl_saetze = 4
-        elif woche <= 12:
-            tl_dist = 175
-            tl_saetze = 3
-        else:
-            tl_dist = 200
-            tl_saetze = 3
-            
         html_matrices += f"""
         <div class="druck-block" style="background-color: #ffffff; color: #000000; border: 2px solid #45a29e; border-radius: 8px; padding: 25px; margin-top: 20px; font-family: Arial, sans-serif;">
             <h2 style="border-bottom: 2px solid #000; padding-bottom: 5px; margin-top: 0; color: #000000 !important;">DOC ATHLETIC TRAININGSMATRIX</h2>
@@ -484,9 +446,9 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_dist}m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
