@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.87)
-# Architektur: 3-Stufig | Syntaxfehler behoben, Feste Stammdatenbank & Matrix
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.88)
+# Architektur: 3-Stufig | Dynamische Wiederholungs-Progression für alle Blöcke
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -54,6 +54,9 @@ TRAINER_CODE = "DocAthletic#2026!"
 if 'auth_modus' not in st.session_state:
     st.session_state.auth_modus = None
 
+if 'navigations_status' not in st.session_state:
+    st.session_state.navigations_status = 'Start'
+
 if st.session_state.auth_modus is None:
     col_l1, col_l2, col_l3 = st.columns([1, 2, 1])
     with col_l2:
@@ -78,10 +81,6 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
-if 'navigations_status' not in st.session_state:
-    st.session_state.navigations_status = 'Start'
-
-# Feste Kader-Datenbank mit exakten, korrigierten Körpergrößen
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -239,43 +238,6 @@ elif st.session_state.navigations_status == 'Operativ':
                     st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.session_state.auth_modus == "trainer":
-        with st.expander("➕ Neuen Athleten / Neue Athletin in Kader aufnehmen"):
-            neu_name = st.text_input("Vollständiger Name")
-            nc1, nc2, nc3 = st.columns(3)
-            with nc1:
-                neu_alter = st.number_input("Alter", min_value=10, max_value=40, value=15, key="n_alt")
-                neu_groesse = st.number_input("Größe (m)", min_value=1.30, max_value=2.15, value=1.75, step=0.01, key="n_gro")
-            with nc2:
-                neu_profil = st.selectbox("Zuordnungs-Profil", list(abc_parameter.keys()), key="n_pro")
-                neu_ft = st.selectbox("Fasertyp", ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"], key="n_ft", index=4)
-            with nc3:
-                neu_reife = st.selectbox("Entwicklungsstatus", ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"], key="n_rei", index=1)
-                neu_sbe = st.text_input("Standard SBE", value="SR 1", key="n_sbe")
-                
-            nc_z1, nc_z2 = st.columns(2)
-            with nc_z1:
-                neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
-            with nc_z2:
-                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
-                
-            if st.button("Athlet anlegen & in Datenbank verankern"):
-                if neu_name.strip():
-                    st.session_state.kader_db[neu_name.strip()] = {
-                        "alter": int(neu_alter),
-                        "groesse": float(neu_groesse),
-                        "profil": neu_profil,
-                        "fasertyp": neu_ft,
-                        "reife": neu_reife,
-                        "sbe": neu_sbe,
-                        "t_60": float(neu_t60),
-                        "t_150": float(neu_t150)
-                    }
-                    st.success(f"Athlet {neu_name.strip()} erfolgreich angelegt.")
-                    st.rerun()
-                else:
-                    st.error("Bitte einen gültigen Namen eingeben.")
-
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
     st.subheader("🔬 Diagnostik-Modul (Polynomische Regression)")
     st.markdown("""
@@ -287,7 +249,6 @@ elif st.session_state.navigations_status == 'Operativ':
     elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
     res_col1, res_col2 = st.columns(2)
-    
     calc_100 = round(t_60 * 1.615, 2)
     calc_200 = round(t_60 * 3.265, 2)
     with res_col1:
@@ -348,9 +309,7 @@ elif st.session_state.navigations_status == 'Operativ':
         
     basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil_soll else "2-3 kg" if "U13" in profil_soll else "3-5 kg" if "U15_w" in profil_soll else "4-6 kg" if "U15_m" in profil_soll else "5-8 kg" if "U17_w" in profil_soll else "10-12 kg"
     basis_last = calc_last(basis_last, True)
-    
     stangen_gewicht = calc_last("1 kg" if "U11" in profil_soll else "2 kg" if "U15" in profil_soll else "3 kg", False)
-    
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     
@@ -360,6 +319,11 @@ elif st.session_state.navigations_status == 'Operativ':
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
+        
+        # DYNAMISCHE PROGRESSION FÜR WIEDERHOLUNGEN (Biologischer Reizzuwachs)
+        curler_wdh = 20 + (woche - 1) * 1  # Start bei 20 Wdh in TE 1, +1 Wdh pro TE
+        jumps_wdh = 10 + ((woche - 1) // 2)  # Steigert sich alle 2 Einheiten um 1 Wdh
+        
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
         aktiver_inhalt = st.session_state.te_anpassungen.get(te_key, standard_inhalt)
@@ -383,7 +347,7 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 3", 
             "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle & Squat-Jumps)", 
             "Benötigte Utensilien": f"Speed Jumper, Power Bars ({basis_last}), 55er Hürtenset", 
-            "Soll (Geplant)": "4 Durchgänge / 12 Wdh. (Folgematrix)", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"4 Durchgänge / {jumps_wdh} Wdh. (Folgematrix)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 4", 
@@ -395,7 +359,7 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 5", 
             "Inhalt / Trainingsmittel": "Unilaterale Belastung & Ischiocrurale Sicherung", 
             "Benötigte Utensilien": "Leg Speed Curler, Kettlebells (2-4 kg)", 
-            "Soll (Geplant)": "3 x 22 Wdh. L/R", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"3 x {curler_wdh} Wdh. L/R", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 6", 
@@ -445,12 +409,14 @@ elif st.session_state.navigations_status == 'Operativ':
             st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     # -------------------------------------------------------------------------
-    # DIE 16px DRUCKMATRIX-RENDERLOGIK
+    # DIE 16px DRUCKMATRIX-RENDERLOGIK MIT DYNAMISCHER WDH-PROGRESSION
     # -------------------------------------------------------------------------
     html_matrices = ""
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
+        curler_wdh = 20 + (woche - 1) * 1
+        jumps_wdh = 10 + ((woche - 1) // 2)
         
         html_matrices += f"""
         <div class="druck-block" style="background-color: #ffffff; color: #000000; border: 2px solid #45a29e; border-radius: 8px; padding: 25px; margin-top: 20px; font-family: Arial, sans-serif;">
@@ -471,12 +437,12 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">10-12 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">10-12 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{abc_sets}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">100m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">24 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
