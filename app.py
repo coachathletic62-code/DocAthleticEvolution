@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.97)
-# Architektur: Finale exakte Dateinamens-Zuordnung für GitHub-Videos
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.98)
+# Architektur: Finale Korrektur Dateiname Front_Squat_Jumps.mp4
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -169,10 +169,10 @@ elif st.session_state.navigations_status == 'Uebersicht':
         <div class="video-grid">
             <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("Front_Squad_Jumps.mp4"):
-            st.video("Front_Squad_Jumps.mp4")
+        if os.path.exists("Front_Squat_Jumps.mp4"):
+            st.video("Front_Squat_Jumps.mp4")
         else:
-            st.warning("[Front_Squad_Jumps.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[Front_Squat_Jumps.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Quadriceps femoris, Gluteus maximus, Core/Rumpfstabilisatoren.</p>
             <p><em>Hinweis:</em> Bis U15 m/w ausschließlich Powerbags (5 bis 16 kg) statt freier Langhanteln.</p>
@@ -324,8 +324,8 @@ elif st.session_state.navigations_status == 'Operativ':
     <strong>Doc Athletic Arbeitsphilosophie ("der andere Weg"):</strong> Die dargestellten Prognosewerte für den 12-Monats-Entwicklungszeitraum basieren ausnahmslos auf der konsequenten Durchführung der Trainingsplanung, Einhaltung aller ernährungsphysiologischen Vorgaben sowie der obligatorischen Beanspruchungsparameter (Neuromuskulärer Status, Morphologie, SBE/RPE als objektiver Datenpunkt, biomechanische Kettenstabilität).
     </div>
     """, unsafe_allow_html=True)
-    if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
-    elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
+    if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung is active.")
+    elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung is active.")
         
     res_col1, res_col2 = st.columns(2)
     calc_100 = round(t_60 * 1.615, 2)
