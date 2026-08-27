@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.95)
-# Architektur: Finale Performance-Zentrale | Lokale Videos + Mathilda Ist-Daten (60m: 8.90s)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.97)
+# Architektur: Finale exakte Dateinamens-Zuordnung für GitHub-Videos
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -160,7 +160,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 30px;'><strong>[Übersicht.png] Bilddatei im Verzeichnis hinterlegen.</strong></div>", unsafe_allow_html=True)
         
     st.markdown("---")
-    st.subheader("🎬 Leistungs-Videobibliothek (Lokale Einbindung)")
+    st.subheader("🎬 Leistungs-Videobibliothek (Exakte Dateinamens-Zuordnung)")
     
     c_v1, c_v2 = st.columns(2)
     
@@ -169,10 +169,10 @@ elif st.session_state.navigations_status == 'Uebersicht':
         <div class="video-grid">
             <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("front_squat.mp4"):
-            st.video("front_squat.mp4")
+        if os.path.exists("Front_Squad_Jumps.mp4"):
+            st.video("Front_Squad_Jumps.mp4")
         else:
-            st.warning("[front_squat.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[Front_Squad_Jumps.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Quadriceps femoris, Gluteus maximus, Core/Rumpfstabilisatoren.</p>
             <p><em>Hinweis:</em> Bis U15 m/w ausschließlich Powerbags (5 bis 16 kg) statt freier Langhanteln.</p>
@@ -183,10 +183,10 @@ elif st.session_state.navigations_status == 'Uebersicht':
         <div class="video-grid">
             <h4 style="color: #66fcf1 !important; margin-top: 0;">2. One Leg Jumper</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("one_leg.mp4"):
-            st.video("one_leg.mp4")
+        if os.path.exists("One_Leg_Jumper.mp4"):
+            st.video("One_Leg_Jumper.mp4")
         else:
-            st.warning("[one_leg.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[One_Leg_Jumper.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Einbeinige Streckerkette (Triceps surae, Quadrizeps, Gluteus medius/maximus).</p>
             <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen. Koordinative Kraft als Zug-Umsatz-Druck-Variante gegenüber freiem Hantel-Umsatz-Stoß.</p>
@@ -195,44 +195,46 @@ elif st.session_state.navigations_status == 'Uebersicht':
         
         st.markdown("""
         <div class="video-grid">
-            <h4 style="color: #66fcf1 !important; margin-top: 0;">3. Hürden-Tiefsprünge</h4>
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">3. Plyo-Hürden</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("huerden.mp4"):
-            st.video("huerden.mp4")
+        if os.path.exists("Plyo_Huerd..mp4"):
+            st.video("Plyo_Huerd..mp4")
         else:
-            st.warning("[huerden.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[Plyo_Huerd..mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
-            <p><strong>Beanspruchte Muskeln:</strong> Reaktiv muskuläre Ketten der unteren Extremität.</p>
-            <p><em>Zweck:</em> Tiefsprünge mit Zusatzlast als sanfte Plyometrie & Exzentrik zur Steigerung der reaktiven Schnellkraft.</p>
+            <p><strong>Beanspruchte Muskeln:</strong> Reaktiv muskuläre Ketten und intermuskuläre Koordination.</p>
+            <p><em>Zweck:</em> Schulung der neuromuskulären Ansteuerung und Frequenzoptimierung.</p>
         </div>
         """, unsafe_allow_html=True)
 
     with c_v2:
         st.markdown("""
         <div class="video-grid">
-            <h4 style="color: #66fcf1 !important; margin-top: 0;">4. Speedmaster Olympia</h4>
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">4. Speedmaster</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("speedmaster.mp4"):
-            st.video("speedmaster.mp4")
+        if os.path.exists("SPEED_MASTER.mp4"):
+            st.video("SPEED_MASTER.mp4")
         else:
-            st.warning("[speedmaster.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[SPEED_MASTER.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Gesamte kinetische Leistungskette unter Maximallast.</p>
             <p><em>Zweck:</em> Hochleistungs-Spezifische Maximalkraft- und Beschleunigungsentwicklung im Profibereich.</p>
         </div>
+        </div>
         """, unsafe_allow_html=True)
-        
+
         st.markdown("""
         <div class="video-grid">
-            <h4 style="color: #66fcf1 !important; margin-top: 0;">5. Leg Speed Curler</h4>
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">5. Zugumsatzstoß</h4>
         """, unsafe_allow_html=True)
-        if os.path.exists("curler.mp4"):
-            st.video("curler.mp4")
+        if os.path.exists("Zug_Ums._Stoß.mp4"):
+            st.video("Zug_Ums._Stoß.mp4")
         else:
-            st.warning("[curler.mp4] nicht im Verzeichnis gefunden.")
+            st.warning("[Zug_Ums._Stoß.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
-            <p><strong>Beanspruchte Muskeln:</strong> Biceps femoris, Semitendinosus, Semimembranosus.</p>
-            <p><em>Zweck:</em> Unilaterale Antagonisten-Sicherung zur Verletzungsprophylaxe und Frequenzstabilisierung.</p>
+            <p><strong>Beanspruchte Muskeln:</strong> Komplette Streckerkette, Rumpf- und Schultergürtelstabilisatoren.</p>
+            <p><em>Zweck:</em> Maximale explosive Kraftübertragung und koordinatives Zusammenspiel im Beschleunigungsverlauf.</p>
+        </div>
         </div>
         """, unsafe_allow_html=True)
 
