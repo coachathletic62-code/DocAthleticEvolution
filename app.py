@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.86)
-# Architektur: 3-Stufig | Kader-Stammdatenbank mit korrigierten Körpergrößen
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.87)
+# Architektur: 3-Stufig | Syntaxfehler behoben, Feste Stammdatenbank & Matrix
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -79,9 +79,9 @@ if st.session_state.auth_modus is None:
     st.stop()
 
 if 'navigations_status' not in st.session_state:
-    st.navigations_status = 'Start'
+    st.session_state.navigations_status = 'Start'
 
-# Aktualisierte Kader-Datenbank mit exakten, korrigierten Körpergrößen
+# Feste Kader-Datenbank mit exakten, korrigierten Körpergrößen
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -476,7 +476,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{abc_sets}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">100m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">24 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergröße / Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">24 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
