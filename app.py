@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.93)
-# Architektur: Performance-Zentrale | Korrelierte Altersklassen & Leistungs-Mediathek
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.95)
+# Architektur: Finale Performance-Zentrale | Lokale Videos + Mathilda Ist-Daten (60m: 8.90s)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -41,9 +41,9 @@ st.markdown("""
         background-color: #0b0c10; border-left: 4px solid #66fcf1;
         padding: 12px; margin-top: 10px; margin-bottom: 15px; font-size: 13px; color: #c5c6c7;
     }
-    .media-card {
+    .video-grid {
         background-color: #111111; border: 2px solid #45a29e; border-radius: 8px;
-        padding: 20px; margin-bottom: 20px;
+        padding: 15px; margin-bottom: 15px;
     }
     .footer-box {
         text-align: center; border: 2px solid #66fcf1; border-radius: 10px;
@@ -85,10 +85,10 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
-# Korrelierte Altersklassen-Struktur von U11 bis Hochleistung
+# Kader-Datenbank mit Mathildas echten Ist-Daten (60m: 8.90s auf Asphalt)
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
-        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
+        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.90, "t_150": 21.14},
         "Sari Saeland": {"alter": 19, "groesse": 1.58, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
         "Ronja Borchmeyer": {"alter": 20, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
         "Svenja Poock": {"alter": 20, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
@@ -141,62 +141,112 @@ if st.session_state.navigations_status == 'Start':
     st.markdown("<br><br>", unsafe_allow_html=True)
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        st.button("SYSTEM INITIALISIEREN & MEDIATHEK >>", on_click=navigiere, args=('Uebersicht',))
+        st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
 
 elif st.session_state.navigations_status == 'Uebersicht':
-    st.title("Systemzentrale & Performance-Mediathek")
-    st.markdown("## Flagship Variante Premium Plus — Hochleistungs- & Kadersteuerung")
+    st.title("Systemübersicht & Athleten-Datenbank")
+    st.markdown("## Komplex-Training im Nachwuchs bis Hochleistungssport (Flagship Variante Premium Plus)")
     st.markdown("---")
     
-    st.subheader("📺 Leistungs- & Übungsbibliothek (Video-Upload & Biomechanik)")
-    st.markdown("Hier sind die 5 zentralen Platzhalter für hochspezifische Leistungsübungen. Das System ergänzt automatisch die innervierten Muskelgruppen nach der Doc Athletic Train Smart Philosophie.")
+    uebersicht_datei = None
+    for datei in os.listdir("."):
+        if datei.lower() in ["übersicht.png", "übersicht.jpg", "uebersicht.png", "uebersicht.jpg"]:
+            uebersicht_datei = datei
+            break
+            
+    if uebersicht_datei:
+        st.image(uebersicht_datei, use_container_width=True)
+    else:
+        st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 30px;'><strong>[Übersicht.png] Bilddatei im Verzeichnis hinterlegen.</strong></div>", unsafe_allow_html=True)
+        
+    st.markdown("---")
+    st.subheader("🎬 Leistungs-Videobibliothek (Lokale Einbindung)")
+    
+    c_v1, c_v2 = st.columns(2)
+    
+    with c_v1:
+        st.markdown("""
+        <div class="video-grid">
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
+        """, unsafe_allow_html=True)
+        if os.path.exists("front_squat.mp4"):
+            st.video("front_squat.mp4")
+        else:
+            st.warning("[front_squat.mp4] nicht im Verzeichnis gefunden.")
+        st.markdown("""
+            <p><strong>Beanspruchte Muskeln:</strong> Quadriceps femoris, Gluteus maximus, Core/Rumpfstabilisatoren.</p>
+            <p><em>Hinweis:</em> Bis U15 m/w ausschließlich Powerbags (5 bis 16 kg) statt freier Langhanteln.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="video-grid">
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">2. One Leg Jumper</h4>
+        """, unsafe_allow_html=True)
+        if os.path.exists("one_leg.mp4"):
+            st.video("one_leg.mp4")
+        else:
+            st.warning("[one_leg.mp4] nicht im Verzeichnis gefunden.")
+        st.markdown("""
+            <p><strong>Beanspruchte Muskeln:</strong> Einbeinige Streckerkette (Triceps surae, Quadrizeps, Gluteus medius/maximus).</p>
+            <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen. Koordinative Kraft als Zug-Umsatz-Druck-Variante gegenüber freiem Hantel-Umsatz-Stoß.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div class="video-grid">
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">3. Hürden-Tiefsprünge</h4>
+        """, unsafe_allow_html=True)
+        if os.path.exists("huerden.mp4"):
+            st.video("huerden.mp4")
+        else:
+            st.warning("[huerden.mp4] nicht im Verzeichnis gefunden.")
+        st.markdown("""
+            <p><strong>Beanspruchte Muskeln:</strong> Reaktiv muskuläre Ketten der unteren Extremität.</p>
+            <p><em>Zweck:</em> Tiefsprünge mit Zusatzlast als sanfte Plyometrie & Exzentrik zur Steigerung der reaktiven Schnellkraft.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # 5 Interaktive Mediathek-Plätze
-    uebungs_slots = [
-        ("1. Front Squat / Front Squat Jumps (Altersbeschränkung: Nur bis U15 m/w)", 
-         "Explosive vertikale Kraftübertragung. Hinweis: Bis U15 ausschließlich als Front Squat Jumps mit leichten Stangen/ohne Zusatzlast; ab U17 Übergang zu Power Bars / schweren Hanteln.",
-         "Primär: Quadriceps femoris (Vastus lateralis/medialis), Gluteus maximus. Sekundär: Core/Rumpf (Transversus abdominis, Erector spinae) zur lumbalen Stabilisation."),
+    with c_v2:
+        st.markdown("""
+        <div class="video-grid">
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">4. Speedmaster Olympia</h4>
+        """, unsafe_allow_html=True)
+        if os.path.exists("speedmaster.mp4"):
+            st.video("speedmaster.mp4")
+        else:
+            st.warning("[speedmaster.mp4] nicht im Verzeichnis gefunden.")
+        st.markdown("""
+            <p><strong>Beanspruchte Muskeln:</strong> Gesamte kinetische Leistungskette unter Maximallast.</p>
+            <p><em>Zweck:</em> Hochleistungs-Spezifische Maximalkraft- und Beschleunigungsentwicklung im Profibereich.</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        ("2. Speed Jumper GZ Entlastung", 
-         "Reaktive Schnellkraft und vertikale Beschleunigung unter Zugentlastung zur neuromuskulären Frequenzoptimierung.",
-         "Primär: Triceps surae (Soleus, Gastrocnemius), Quadriceps. Sekundär: Ischiocrurale Muskulatur als Kniegelenkssicherung."),
-        
-        ("3. Leg Speed Curler (Unilaterale Ischiocrurale Sicherung)", 
-         "Isolierte Hochgeschwindigkeits-Kräftigung der Kniebeuger zur Prävention von muskulären Dysbalancen und Sprint-Absicherung.",
-         "Primär: Biceps femoris, Semitendinosus, Semimembranosus. Sekundär: Gastrocnemius."),
-        
-        ("4. Speed Drills & Lauf-ABC (Kniehebelauf / Anfersen)", 
-         "Schulung der neuromuskulären Ansteuerung, Frequenz und Schrittgestaltung.",
-         "Primär: Iliopsoas, Rectus femoris, Gluteus medius/minimus. Sekundär: Wadenmuskulatur."),
-        
-        ("5. Komplex-Tempoläufe (Vmax-Korrelation)", 
-         "Spezifischer aerob-anaerober Laufumfang nach polynomialer Regressions-Tempotabelle.",
-         "Primär: Gesamte kinetische Kette der unteren Extremität, Herz-Kreislauf-System. Sekundär: Rumpfstabilisatoren.")
-    ]
-
-    for title, desc, muskeln in uebungs_slots:
-        st.markdown(f"""
-        <div class="media-card">
-            <h3 style="color: #66fcf1 !important; margin-top: 0;">{title}</h3>
-            <p><strong>Methodische Beschreibung & Zweck:</strong> {desc}</p>
-            <p><strong>Innervierte Muskelgruppen & Ketten:</strong> <span style="color: #66fcf1;">{muskeln}</span></p>
-            <div style="border: 2px dashed #45a29e; padding: 15px; text-align: center; border-radius: 6px; color: #c5c6c7;">
-                [ Video-Upload / MP4 Platzhalter — Hier Video einbinden ]
-            </div>
+        st.markdown("""
+        <div class="video-grid">
+            <h4 style="color: #66fcf1 !important; margin-top: 0;">5. Leg Speed Curler</h4>
+        """, unsafe_allow_html=True)
+        if os.path.exists("curler.mp4"):
+            st.video("curler.mp4")
+        else:
+            st.warning("[curler.mp4] nicht im Verzeichnis gefunden.")
+        st.markdown("""
+            <p><strong>Beanspruchte Muskeln:</strong> Biceps femoris, Semitendinosus, Semimembranosus.</p>
+            <p><em>Zweck:</em> Unilaterale Antagonisten-Sicherung zur Verletzungsprophylaxe und Frequenzstabilisierung.</p>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
-        st.button("<< ZURÜCK ZUM START", on_click=navigiere, args=('Start',))
+        st.button("<< ZURÜCK", on_click=navigiere, args=('Start',))
     with col2:
-        st.button("ZUR OPERATIVEN STEUERUNG >>", on_click=navigiere, args=('Operativ',))
+        st.button("OPERATIVES MENÜ STARTEN >>", on_click=navigiere, args=('Operativ',))
 
 elif st.session_state.navigations_status == 'Operativ':
     col_top1, col_top2 = st.columns([1, 4])
     with col_top1:
-        st.button("<< MEDIATHEK", on_click=navigiere, args=('Uebersicht',))
+        st.button("<< ÜBERSICHT", on_click=navigiere, args=('Uebersicht',))
     with col_top2:
         st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
@@ -328,19 +378,19 @@ elif st.session_state.navigations_status == 'Operativ':
         st.subheader(f"📋 Vollständiger Makrozyklus & Adaptive Ist-Rückkopplung: {ziel}")
         
     def get_power_bar_last(p_soll, reife_i):
-        if "U11" in p_soll: base = "1-2 kg"
-        elif "U13" in p_soll: base = "2-3 kg"
-        elif "U15_w" in p_soll: base = "3-4 kg"
-        elif "U15_m" in p_soll: base = "4-5 kg"
-        elif "U17" in p_soll or "U19" in p_soll: base = "5-8 kg"
-        else: base = "8-12 kg"
+        if "U11" in p_soll: base = "Powerbag 5-8 kg"
+        elif "U13" in p_soll: base = "Powerbag 8-12 kg"
+        elif "U15_w" in p_soll: base = "Powerbag 10-14 kg"
+        elif "U15_m" in p_soll: base = "Powerbag 12-16 kg"
+        elif "U17" in p_soll or "U19" in p_soll: base = "Power Bars (5-8 kg)"
+        else: base = "Power Bars / Hanteln (8-12 kg)"
             
         if reife_i == "Spätentwickler": return f"{base} (Reduziert)"
         elif reife_i == "Frühentwickler": return f"{base} (Erhöht)"
         return base
 
     basis_last = get_power_bar_last(profil_soll, reife_intern)
-    stangen_gewicht = "1 kg" if "U11" in profil_soll else "2 kg" if "U15" in profil_soll else "3 kg"
+    stangen_gewicht = "Powerbag 5 kg" if "U11" in profil_soll else "Powerbag 10 kg" if "U15" in profil_soll else "Stange 3 kg"
     if reife_intern == "Spätentwickler": stangen_gewicht += " (Reduziert)"
     
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
@@ -386,7 +436,7 @@ elif st.session_state.navigations_status == 'Operativ':
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
             "Inhalt / Trainingsmittel": "Reaktiv-Komplex (Systemwechsel A1/A2: Shuttle, Squat-Jumps & Speed Jumper GZ Entlastung)", 
-            "Benötigte Utensilien": f"Speed Jumper (GZ Entlastung), Power Bars ({basis_last}), 55er Hürtenset", 
+            "Benötigte Utensilien": f"Speed Jumper (GZ Entlastung), {basis_last}, 55er Hürtenset", 
             "Soll (Geplant)": f"4 Durchgänge / {jumps_wdh} Wdh. (GZ Entlastung steigend)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
@@ -486,12 +536,12 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Power Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
