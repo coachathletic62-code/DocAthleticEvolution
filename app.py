@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.91)
-# Architektur: Vollständige System-Synthese | Exakte +1 Wdh. Progression & Lasten-Kompensation
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.92)
+# Architektur: Vollständige System-Synthese | Altersabhängige Tempolauf-Progression (10m / 25m)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -301,7 +301,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.subheader(f"📋 Vollständiger Makrozyklus & Adaptive Ist-Rückkopplung: {ziel}")
         
     def get_power_bar_last(p_soll, reife_i):
-        # Exakte Lastzuweisung für Power Bars & Squat-Stoß-Jumps
         if "U11" in p_soll:
             base = "1-2 kg"
         elif "U13" in p_soll:
@@ -336,11 +335,17 @@ elif st.session_state.navigations_status == 'Operativ':
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         
         curler_wdh = 20 + (woche - 1) * 1
-        jumps_wdh = 10 + (woche - 1) * 1  # Exakt +1 Wiederholung pro Trainingseinheit (TE 1=10, TE 4=13)
+        jumps_wdh = 10 + (woche - 1) * 1  # Exakt +1 Wdh pro TE
         
+        # Altersabhängige Tempolauf-Progression: Jüngere (<=16 Jahre) 10m Schritte, Ältere 25m Schritte ab 75m Start
+        if int(alter) <= 16:
+            tl_distanz = 75 + (woche - 1) * 10  # 75, 85, 95 ...
+            if tl_distanz > 150: tl_distanz = 150
+        else:
+            tl_distanz = 75 + (woche - 1) * 25  # 75, 100, 125, 150, 175, 200 ...
+            if tl_distanz > 200: tl_distanz = 200
+            
         tl_saetze = 4 if int(alter) <= 14 else 5
-        tl_distanz = 75 + ((woche - 1) // 2) * 15
-        if tl_distanz > 150: tl_distanz = 150
         
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
@@ -435,9 +440,15 @@ elif st.session_state.navigations_status == 'Operativ':
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         curler_wdh = 20 + (woche - 1) * 1
         jumps_wdh = 10 + (woche - 1) * 1
+        
+        if int(alter) <= 16:
+            tl_distanz = 75 + (woche - 1) * 10
+            if tl_distanz > 150: tl_distanz = 150
+        else:
+            tl_distanz = 75 + (woche - 1) * 25
+            if tl_distanz > 200: tl_distanz = 200
+            
         tl_saetze = 4 if int(alter) <= 14 else 5
-        tl_distanz = 75 + ((woche - 1) // 2) * 15
-        if tl_distanz > 150: tl_distanz = 150
         
         html_matrices += f"""
         <div class="druck-block" style="background-color: #ffffff; color: #000000; border: 2px solid #45a29e; border-radius: 8px; padding: 25px; margin-top: 20px; font-family: Arial, sans-serif;">
@@ -458,7 +469,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">>80% ({stange_last})</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="px; border: 1px solid #000; color: #000000 !important;">{basis_last} Power Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{basis_last} Power Bar</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
@@ -466,7 +477,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
             </table>
             <br>
             <p style="text-align: center; font-size: 14px; margin-bottom: 0; color: #000000 !important;"><em>Doc Athletic Train Smart Philosophie — Aufgeben gilt nicht!</em></p>
