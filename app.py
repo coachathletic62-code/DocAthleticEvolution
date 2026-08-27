@@ -1,5 +1,5 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.80)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.81)
 # Architektur: 3-Stufig | Engine: Login, Live-Steuerung & Voll-Matrix-Druck
 # =========================================================================
 import streamlit as st
@@ -32,7 +32,7 @@ st.markdown("""
         border-radius: 8px; padding: 25px; margin-top: 20px; margin-bottom: 20px;
         font-family: Arial, sans-serif;
     }
-    .druck-block h2, .druck-block p, .druck-block td, .druck-block th {
+    .druck-block h2, .druck-block p, .druck-block td, .druck-block th, .druck-block strong {
         color: #000000 !important;
     }
     .footer-box {
@@ -205,22 +205,20 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Berechnungen für die dynamische Matrix
+    # Berechnungen
     calc_100 = round(t_60 * 1.615, 2)
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 16.0, "step_m": 2.0})
     abc_sets = vorgaben["sets"]
-    
     woche_num = int(te_wahl.replace("TE ", ""))
     raw_dist = (vorgaben["start_m"] + ((woche_num - 1) * vorgaben["step_m"])) * 1.09
     abc_dist = round(raw_dist * 2) / 2
 
-    # Profilspezifische Hardware- und Lastenberechnung
+    # Hardware-Berechnungen
     athleten_alter = int(aktuelle_daten["alter"])
     gewichtsstange = "2 Kg" if athleten_alter < 16 else "2-3 Kg"
     power_bar_leicht = "2 Kg" if athleten_alter < 16 else "4 Kg"
     power_bar_schwer = "3-4 Kg" if athleten_alter < 16 else "4-6 Kg"
     speed_jumper_last = "5-8 Kg" if ft in ["Gazelle", "Ausdauer"] and athleten_alter < 18 else "8-12 Kg"
-    
     stl_vorgabe = "2x 100m u. 3x 60m"
     stl_intensitat = "bis 70% u. 80% Vmax"
 
@@ -228,12 +226,12 @@ elif st.session_state.navigations_status == 'Operativ':
     st.subheader(f"📄 Offizielles Trainingsprotokoll & Druckmatrix: {ziel} ({te_wahl})")
     st.markdown("Zur Dokumentation auf dem Platz via **Strg + P** ausdrucken.")
 
-    st.markdown(f"""
+    # DIE TABELLE - ZWINGEND MIT unsafe_allow_html=True AM ENDE
+    html_matrix = f"""
     <div class="druck-block">
         <h2 style="border-bottom: 2px solid #000000; padding-bottom: 5px; margin-top: 0;">DOC ATHLETIC TRAININGSMATRIX</h2>
         <p><strong>Athlet / Kader:</strong> {ziel} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Einheit:</strong> {te_wahl} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Fasertyp:</strong> {ft} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>SBE-Ziel:</strong> {sbe_ziel}</p>
         <hr style="border: 1px solid #000;">
-        
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
             <thead>
                 <tr style="background-color: #e5e7eb; border-bottom: 2px solid #000000;">
@@ -246,7 +244,6 @@ elif st.session_state.navigations_status == 'Operativ':
                 </tr>
             </thead>
             <tbody>
-                <!-- Block 1 -->
                 <tr>
                     <td style="padding: 6px; border: 1px solid #000;"><strong>Block 1: Allg. Erwärmung</strong> (Shuttle, ganzer Fuß)</td>
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">1</td>
@@ -263,7 +260,6 @@ elif st.session_state.navigations_status == 'Operativ':
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">Trinkp.</td>
                     <td style="padding: 6px; border: 1px solid #000;"></td>
                 </tr>
-                <!-- Block 2 -->
                 <tr>
                     <td style="padding: 6px; border: 1px solid #000; background-color: #f9fafb;" colspan="6"><strong>Block 2: Neuromuskuläre & koord. Innervation</strong> (>80% Beschleunigung zurück)</td>
                 </tr>
@@ -291,7 +287,6 @@ elif st.session_state.navigations_status == 'Operativ':
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">2s Wende</td>
                     <td style="padding: 6px; border: 1px solid #000;"></td>
                 </tr>
-                <!-- Block 3 -->
                 <tr>
                     <td style="padding: 6px; border: 1px solid #000; background-color: #f9fafb;" colspan="6"><strong>Block 3: Kompl. Kraftfähigkeiten / Reaktiv-Komplex</strong></td>
                 </tr>
@@ -319,7 +314,6 @@ elif st.session_state.navigations_status == 'Operativ':
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">90s</td>
                     <td style="padding: 6px; border: 1px solid #000;"></td>
                 </tr>
-                <!-- Block 4 -->
                 <tr>
                     <td style="padding: 6px; border: 1px solid #000;"><strong>Block 4: Tempoläufe (TL)</strong> (Spezifischer Umfang)</td>
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">{abc_sets}</td>
@@ -328,7 +322,6 @@ elif st.session_state.navigations_status == 'Operativ':
                     <td style="padding: 6px; border: 1px solid #000; text-align: center;">Gehpause</td>
                     <td style="padding: 6px; border: 1px solid #000;"></td>
                 </tr>
-                <!-- Block 5 -->
                 <tr>
                     <td style="padding: 6px; border: 1px solid #000; background-color: #f9fafb;" colspan="6"><strong>Block 5: Unilaterale Belastung & Ischiocrurale Sicherung</strong></td>
                 </tr>
@@ -350,11 +343,12 @@ elif st.session_state.navigations_status == 'Operativ':
                 </tr>
             </tbody>
         </table>
-        
         <br>
         <p style="text-align: center; font-size: 11px; margin-bottom: 0;"><em>Doc Athletic Train Smart Philosophie — Aufgeben gilt nicht!</em></p>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    
+    st.markdown(html_matrix, unsafe_allow_html=True)
 
     # FINALES ABSCHLUSS-FOTO
     st.markdown("---")
@@ -369,4 +363,4 @@ elif st.session_state.navigations_status == 'Operativ':
         try:
             st.image("Foto.jpg", use_container_width=True)
         except:
-            st.markdown("<div style='text-align: center; color: #66fcf1; padding: 10px;'>[Foto.jpg] wird im Verzeichnis gesucht.</div>", unsafe_allow_html=True)
+            pass
