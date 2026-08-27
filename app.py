@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.92)
-# Architektur: Vollständige System-Synthese | Altersabhängige Tempolauf-Progression (10m / 25m)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.93)
+# Architektur: Performance-Zentrale | Korrelierte Altersklassen & Leistungs-Mediathek
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -40,6 +40,10 @@ st.markdown("""
     .philosophie-box {
         background-color: #0b0c10; border-left: 4px solid #66fcf1;
         padding: 12px; margin-top: 10px; margin-bottom: 15px; font-size: 13px; color: #c5c6c7;
+    }
+    .media-card {
+        background-color: #111111; border: 2px solid #45a29e; border-radius: 8px;
+        padding: 20px; margin-bottom: 20px;
     }
     .footer-box {
         text-align: center; border: 2px solid #66fcf1; border-radius: 10px;
@@ -81,6 +85,7 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
+# Korrelierte Altersklassen-Struktur von U11 bis Hochleistung
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -114,15 +119,10 @@ abc_parameter = {
     "Fussball_U17_w": {"sets": 5, "start_m": 20.0, "step_m": 2.5, "sbe_ziel": "SR 1-2"},
     "Fussball_U19_m": {"sets": 5, "start_m": 25.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
     "Fussball_U19_w": {"sets": 5, "start_m": 22.0, "step_m": 2.5, "sbe_ziel": "SR 1"},
+    "Fussball_U20_m": {"sets": 5, "start_m": 26.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
+    "Fussball_U20_w": {"sets": 5, "start_m": 23.0, "step_m": 2.5, "sbe_ziel": "SR 1"},
     "Fussball_U23_m": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 1-0"},
     "Fussball_U23_w": {"sets": 6, "start_m": 25.0, "step_m": 2.5, "sbe_ziel": "SR 1-0"},
-    "Basketball_U17_m": {"sets": 5, "start_m": 20.0, "step_m": 3.0, "sbe_ziel": "SR 2"},
-    "Basketball_U17_w": {"sets": 5, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
-    "Leichtathletik_U14": {"sets": 4, "start_m": 15.0, "step_m": 2.0, "sbe_ziel": "SR 2-3"},
-    "Leichtathletik_U15": {"sets": 4, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
-    "Leichtathletik_U17_m": {"sets": 5, "start_m": 25.0, "step_m": 3.5, "sbe_ziel": "SR 1-2"},
-    "Leichtathletik_U17_w": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1-2"},
-    "Skispringen_U20": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
     "Hochleistung_m": {"sets": 6, "start_m": 30.0, "step_m": 3.0, "sbe_ziel": "SR 0"},
     "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
@@ -141,35 +141,62 @@ if st.session_state.navigations_status == 'Start':
     st.markdown("<br><br>", unsafe_allow_html=True)
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
+        st.button("SYSTEM INITIALISIEREN & MEDIATHEK >>", on_click=navigiere, args=('Uebersicht',))
 
 elif st.session_state.navigations_status == 'Uebersicht':
-    st.title("Systemübersicht & Athleten-Datenbank")
-    st.markdown("## Komplex-Training im Nachwuchs bis Hochleistungssport")
+    st.title("Systemzentrale & Performance-Mediathek")
+    st.markdown("## Flagship Variante Premium Plus — Hochleistungs- & Kadersteuerung")
     st.markdown("---")
     
-    uebersicht_datei = None
-    for datei in os.listdir("."):
-        if datei.lower() in ["übersicht.png", "übersicht.jpg", "uebersicht.png", "uebersicht.jpg"]:
-            uebersicht_datei = datei
-            break
-            
-    if uebersicht_datei:
-        st.image(uebersicht_datei, use_container_width=True)
-    else:
-        st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 50px;'><strong>[Übersicht.png] wurde im Verzeichnis nicht gefunden.</strong></div>", unsafe_allow_html=True)
+    st.subheader("📺 Leistungs- & Übungsbibliothek (Video-Upload & Biomechanik)")
+    st.markdown("Hier sind die 5 zentralen Platzhalter für hochspezifische Leistungsübungen. Das System ergänzt automatisch die innervierten Muskelgruppen nach der Doc Athletic Train Smart Philosophie.")
+
+    # 5 Interaktive Mediathek-Plätze
+    uebungs_slots = [
+        ("1. Front Squat / Front Squat Jumps (Altersbeschränkung: Nur bis U15 m/w)", 
+         "Explosive vertikale Kraftübertragung. Hinweis: Bis U15 ausschließlich als Front Squat Jumps mit leichten Stangen/ohne Zusatzlast; ab U17 Übergang zu Power Bars / schweren Hanteln.",
+         "Primär: Quadriceps femoris (Vastus lateralis/medialis), Gluteus maximus. Sekundär: Core/Rumpf (Transversus abdominis, Erector spinae) zur lumbalen Stabilisation."),
         
+        ("2. Speed Jumper GZ Entlastung", 
+         "Reaktive Schnellkraft und vertikale Beschleunigung unter Zugentlastung zur neuromuskulären Frequenzoptimierung.",
+         "Primär: Triceps surae (Soleus, Gastrocnemius), Quadriceps. Sekundär: Ischiocrurale Muskulatur als Kniegelenkssicherung."),
+        
+        ("3. Leg Speed Curler (Unilaterale Ischiocrurale Sicherung)", 
+         "Isolierte Hochgeschwindigkeits-Kräftigung der Kniebeuger zur Prävention von muskulären Dysbalancen und Sprint-Absicherung.",
+         "Primär: Biceps femoris, Semitendinosus, Semimembranosus. Sekundär: Gastrocnemius."),
+        
+        ("4. Speed Drills & Lauf-ABC (Kniehebelauf / Anfersen)", 
+         "Schulung der neuromuskulären Ansteuerung, Frequenz und Schrittgestaltung.",
+         "Primär: Iliopsoas, Rectus femoris, Gluteus medius/minimus. Sekundär: Wadenmuskulatur."),
+        
+        ("5. Komplex-Tempoläufe (Vmax-Korrelation)", 
+         "Spezifischer aerob-anaerober Laufumfang nach polynomialer Regressions-Tempotabelle.",
+         "Primär: Gesamte kinetische Kette der unteren Extremität, Herz-Kreislauf-System. Sekundär: Rumpfstabilisatoren.")
+    ]
+
+    for title, desc, muskeln in uebungs_slots:
+        st.markdown(f"""
+        <div class="media-card">
+            <h3 style="color: #66fcf1 !important; margin-top: 0;">{title}</h3>
+            <p><strong>Methodische Beschreibung & Zweck:</strong> {desc}</p>
+            <p><strong>Innervierte Muskelgruppen & Ketten:</strong> <span style="color: #66fcf1;">{muskeln}</span></p>
+            <div style="border: 2px dashed #45a29e; padding: 15px; text-align: center; border-radius: 6px; color: #c5c6c7;">
+                [ Video-Upload / MP4 Platzhalter — Hier Video einbinden ]
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("---")
     col1, col2 = st.columns(2)
     with col1:
-        st.button("<< ZURÜCK", on_click=navigiere, args=('Start',))
+        st.button("<< ZURÜCK ZUM START", on_click=navigiere, args=('Start',))
     with col2:
-        st.button("OPERATIVES MENÜ STARTEN >>", on_click=navigiere, args=('Operativ',))
+        st.button("ZUR OPERATIVEN STEUERUNG >>", on_click=navigiere, args=('Operativ',))
 
 elif st.session_state.navigations_status == 'Operativ':
     col_top1, col_top2 = st.columns([1, 4])
     with col_top1:
-        st.button("<< ÜBERSICHT", on_click=navigiere, args=('Uebersicht',))
+        st.button("<< MEDIATHEK", on_click=navigiere, args=('Uebersicht',))
     with col_top2:
         st.markdown("## 🏃‍♂️ Operative Trainingssteuerung")
     
@@ -301,23 +328,15 @@ elif st.session_state.navigations_status == 'Operativ':
         st.subheader(f"📋 Vollständiger Makrozyklus & Adaptive Ist-Rückkopplung: {ziel}")
         
     def get_power_bar_last(p_soll, reife_i):
-        if "U11" in p_soll:
-            base = "1-2 kg"
-        elif "U13" in p_soll:
-            base = "2-3 kg"
-        elif "U15_w" in p_soll:
-            base = "3-4 kg"
-        elif "U15_m" in p_soll:
-            base = "4-5 kg"
-        elif "U17" in p_soll or "U19" in p_soll:
-            base = "5-8 kg"
-        else:
-            base = "8-12 kg"
+        if "U11" in p_soll: base = "1-2 kg"
+        elif "U13" in p_soll: base = "2-3 kg"
+        elif "U15_w" in p_soll: base = "3-4 kg"
+        elif "U15_m" in p_soll: base = "4-5 kg"
+        elif "U17" in p_soll or "U19" in p_soll: base = "5-8 kg"
+        else: base = "8-12 kg"
             
-        if reife_i == "Spätentwickler":
-            return f"{base} (Reduziert)"
-        elif reife_i == "Frühentwickler":
-            return f"{base} (Erhöht)"
+        if reife_i == "Spätentwickler": return f"{base} (Reduziert)"
+        elif reife_i == "Frühentwickler": return f"{base} (Erhöht)"
         return base
 
     basis_last = get_power_bar_last(profil_soll, reife_intern)
@@ -333,16 +352,14 @@ elif st.session_state.navigations_status == 'Operativ':
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
-        
         curler_wdh = 20 + (woche - 1) * 1
-        jumps_wdh = 10 + (woche - 1) * 1  # Exakt +1 Wdh pro TE
+        jumps_wdh = 10 + (woche - 1) * 1
         
-        # Altersabhängige Tempolauf-Progression: Jüngere (<=16 Jahre) 10m Schritte, Ältere 25m Schritte ab 75m Start
         if int(alter) <= 16:
-            tl_distanz = 75 + (woche - 1) * 10  # 75, 85, 95 ...
+            tl_distanz = 75 + (woche - 1) * 10
             if tl_distanz > 150: tl_distanz = 150
         else:
-            tl_distanz = 75 + (woche - 1) * 25  # 75, 100, 125, 150, 175, 200 ...
+            tl_distanz = 75 + (woche - 1) * 25
             if tl_distanz > 200: tl_distanz = 200
             
         tl_saetze = 4 if int(alter) <= 14 else 5
@@ -474,10 +491,10 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
             </table>
             <br>
             <p style="text-align: center; font-size: 14px; margin-bottom: 0; color: #000000 !important;"><em>Doc Athletic Train Smart Philosophie — Aufgeben gilt nicht!</em></p>
