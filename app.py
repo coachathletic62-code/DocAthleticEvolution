@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.83)
-# Architektur: 3-Stufig | Basis 18.75 + Skalierte 16px Druckmatrix & Block 6
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.84)
+# Architektur: 3-Stufig | Basis 18.75 + Skalierte 16px Druckmatrix & 2.5m Raster
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -48,7 +48,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# AUTHENTIFIZIERUNG (Frei anpassbare Codes)
 GAST_CODE = "gast2026"
 TRAINER_CODE = "DocAthletic#2026!"
 
@@ -110,7 +109,7 @@ abc_parameter = {
     "Fussball_U11": {"sets": 3, "start_m": 12.0, "step_m": 2.0, "sbe_ziel": "SR 3"},
     "Fussball_U13": {"sets": 4, "start_m": 15.0, "step_m": 2.5, "sbe_ziel": "SR 2-3"},
     "Fussball_U15_m": {"sets": 4, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
-    "Fussball_U15_w": {"sets": 4, "start_m": 16.0, "step_m": 2.0, "sbe_ziel": "SR 2"},
+    "Fussball_U15_w": {"sets": 4, "start_m": 15.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
     "Fussball_U17_m": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1-2"},
     "Fussball_U17_w": {"sets": 5, "start_m": 20.0, "step_m": 2.5, "sbe_ziel": "SR 1-2"},
     "Fussball_U19_m": {"sets": 5, "start_m": 25.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
@@ -347,15 +346,17 @@ elif st.session_state.navigations_status == 'Operativ':
     basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil_soll else "2-3 kg" if "U13" in profil_soll else "3-5 kg" if "U15_w" in profil_soll else "4-6 kg" if "U15_m" in profil_soll else "5-8 kg" if "U17_w" in profil_soll else "10-12 kg"
     basis_last = calc_last(basis_last, True)
     stangen_gewicht = calc_last("1.5 kg" if "U11" in profil_soll or "U13" in profil_soll else "2.0 kg" if "U15" in profil_soll else "3.0 kg", False)
-    vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 16.0, "step_m": 2.0})
+    vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     
     te_liste = range(1, 3) if st.session_state.auth_modus == "gast" and "Alle" not in te_wahl else (range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))])
     protokoll = []
     
     for woche in te_liste:
-        raw_dist = (vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])) * 1.09
-        abc_dist = round(raw_dist * 2) / 2
+        # Exaktes Runden auf 2.5-Meter-Schritte (15m, 17.5m, 20m, 22.5m usw.)
+        raw_m = vorgaben["start_m"] + ((woche - 1) * 2.5)
+        abc_dist = round(raw_m * 2) / 2
+        
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
@@ -374,7 +375,7 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 2", 
             "Inhalt / Trainingsmittel": aktiver_inhalt, 
             "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
@@ -442,12 +443,12 @@ elif st.session_state.navigations_status == 'Operativ':
             st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     # -------------------------------------------------------------------------
-    # DIE NEUE 16px DRUCKMATRIX-RENDERLOGIK
+    # DIE SKALIERTE 16px DRUCKMATRIX IM 2.5m RASTER
     # -------------------------------------------------------------------------
     html_matrices = ""
     for woche in te_liste:
-        raw_dist = (vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])) * 1.09
-        abc_dist = round(raw_dist * 2) / 2
+        raw_m = vorgaben["start_m"] + ((woche - 1) * 2.5)
+        abc_dist = round(raw_m * 2) / 2
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         
         html_matrices += f"""
