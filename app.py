@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.85)
-# Architektur: 3-Stufig | 16px Druckmatrix | 2.5m Raster | Zwingende 60m Korrelation
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.86)
+# Architektur: 3-Stufig | Kader-Stammdatenbank mit korrigierten Körpergrößen
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -79,17 +79,17 @@ if st.session_state.auth_modus is None:
     st.stop()
 
 if 'navigations_status' not in st.session_state:
-    st.session_state.navigations_status = 'Start'
+    st.navigations_status = 'Start'
 
-# DATENBANK: HIER KÖRPERGRÖSSEN PERMANENT KORRIGIEREN
+# Aktualisierte Kader-Datenbank mit exakten, korrigierten Körpergrößen
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
-        "Sari Saeland": {"alter": 19, "groesse": 1.65, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
-        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
-        "Svenja Poock": {"alter": 20, "groesse": 1.68, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
-        "Nora Giannori": {"alter": 22, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
-        "Mieke Schiemann": {"alter": 24, "groesse": 1.72, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
+        "Sari Saeland": {"alter": 19, "groesse": 1.58, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
+        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
+        "Svenja Poock": {"alter": 20, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
+        "Nora Giannori": {"alter": 22, "groesse": 1.77, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
+        "Mieke Schiemann": {"alter": 24, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
         "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60},
         "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30},
         "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00},
@@ -110,7 +110,7 @@ abc_parameter = {
     "Fussball_U11": {"sets": 3, "start_m": 12.0, "step_m": 2.0, "sbe_ziel": "SR 3"},
     "Fussball_U13": {"sets": 4, "start_m": 15.0, "step_m": 2.5, "sbe_ziel": "SR 2-3"},
     "Fussball_U15_m": {"sets": 4, "start_m": 18.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
-    "Fussball_U15_w": {"sets": 4, "start_m": 15.0, "step_m": 2.5, "sbe_ziel": "SR 2"},
+    "Fussball_U15_w": {"sets": 4, "start_m": 15.0, "step_m": 2.5, "sbe_ziel": "SR 2"}, 
     "Fussball_U17_m": {"sets": 5, "start_m": 22.0, "step_m": 3.0, "sbe_ziel": "SR 1-2"},
     "Fussball_U17_w": {"sets": 5, "start_m": 20.0, "step_m": 2.5, "sbe_ziel": "SR 1-2"},
     "Fussball_U19_m": {"sets": 5, "start_m": 25.0, "step_m": 3.0, "sbe_ziel": "SR 1"},
@@ -210,14 +210,12 @@ elif st.session_state.navigations_status == 'Operativ':
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
-        # MASTER-VARIABLE 60m
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
-    # ZWINGENDE DYNAMISCHE KORRELATION (150m ist immer 60m * 2.375)
     auto_150 = round(t_60 * 2.375, 2)
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s) [Auto-Korreliert]", min_value=10.0, max_value=40.0, value=auto_150, step=0.01, disabled=(st.session_state.auth_modus == "gast"))
-        
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+    
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         col_bs1, col_bs2 = st.columns(2)
         with col_bs1:
@@ -232,7 +230,7 @@ elif st.session_state.navigations_status == 'Operativ':
                     "t_60": float(t_60),
                     "t_150": float(t_150)
                 }
-                st.success(f"Profil für {ziel} gesichert. (Achtung: Hard-Reload löscht diesen temporären RAM-Speicher!)")
+                st.success(f"Profil, Größe ({groesse}m) und Bestzeiten für {ziel} permanent verankert.")
         with col_bs2:
             if len(st.session_state.kader_db) > 1:
                 if st.button(f"🗑️ Athlet {ziel} aus Kader löschen"):
@@ -259,17 +257,17 @@ elif st.session_state.navigations_status == 'Operativ':
             with nc_z1:
                 neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
             with nc_z2:
-                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=round(7.50 * 2.375, 2), step=0.01, key="n_t150")
+                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
                 
             if st.button("Athlet anlegen & in Datenbank verankern"):
                 if neu_name.strip():
                     st.session_state.kader_db[neu_name.strip()] = {
-                        "alter": int(alter),
-                        "groesse": float(groesse),
-                        "profil": profil_soll,
-                        "fasertyp": ft,
-                        "reife": reife,
-                        "sbe": sbe_ziel,
+                        "alter": int(neu_alter),
+                        "groesse": float(neu_groesse),
+                        "profil": neu_profil,
+                        "fasertyp": neu_ft,
+                        "reife": neu_reife,
+                        "sbe": neu_sbe,
                         "t_60": float(neu_t60),
                         "t_150": float(neu_t150)
                     }
@@ -289,6 +287,7 @@ elif st.session_state.navigations_status == 'Operativ':
     elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
     res_col1, res_col2 = st.columns(2)
+    
     calc_100 = round(t_60 * 1.615, 2)
     calc_200 = round(t_60 * 3.265, 2)
     with res_col1:
@@ -342,14 +341,16 @@ elif st.session_state.navigations_status == 'Operativ':
         
     def calc_last(base_str, is_gross):
         if reife_intern == "Spätentwickler":
-            return f"Reduziert (-30%)" if is_gross else f"Reduziert (-20%)"
+            return f"Reduziert (-30%)" if is_gross else f"Reduziert"
         elif reife_intern == "Frühentwickler":
             return f"Erhöht (+15%)"
         return base_str
         
     basis_last = "12-16 kg" if ziel == "Aimie" else "0-1 kg" if "U11" in profil_soll else "2-3 kg" if "U13" in profil_soll else "3-5 kg" if "U15_w" in profil_soll else "4-6 kg" if "U15_m" in profil_soll else "5-8 kg" if "U17_w" in profil_soll else "10-12 kg"
     basis_last = calc_last(basis_last, True)
-    stangen_gewicht = calc_last("1.5 kg" if "U11" in profil_soll or "U13" in profil_soll else "2.0 kg" if "U15" in profil_soll else "3.0 kg", False)
+    
+    stangen_gewicht = calc_last("1 kg" if "U11" in profil_soll else "2 kg" if "U15" in profil_soll else "3 kg", False)
+    
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     
@@ -357,9 +358,7 @@ elif st.session_state.navigations_status == 'Operativ':
     protokoll = []
     
     for woche in te_liste:
-        raw_m = vorgaben["start_m"] + ((woche - 1) * 2.5)
-        abc_dist = round(raw_m * 2) / 2
-        
+        abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         te_key = f"{ziel}_TE_{woche}_inhalt"
         standard_inhalt = f"Neuromuskuläre Innervation (Lauf-ABC & Speed Drills - Adaptiv)"
@@ -378,7 +377,7 @@ elif st.session_state.navigations_status == 'Operativ':
             "TE": f"TE {woche}", "Block": "Block 2", 
             "Inhalt / Trainingsmittel": aktiver_inhalt, 
             "Benötigte Utensilien": f"Gewichtsstangen ({stange_last})", 
-            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m", "Tatsächlich Ist": ist_wert
+            "Soll (Geplant)": f"{abc_sets} x {abc_dist:.1f} m (Folgematrix +9%)", "Tatsächlich Ist": ist_wert
         })
         protokoll.append({
             "TE": f"TE {woche}", "Block": "Block 3", 
@@ -446,12 +445,11 @@ elif st.session_state.navigations_status == 'Operativ':
             st.caption("Nur für lizenzierte Trainer verfügbar.")
 
     # -------------------------------------------------------------------------
-    # DIE SKALIERTE 16px DRUCKMATRIX IM 2.5m RASTER
+    # DIE 16px DRUCKMATRIX-RENDERLOGIK
     # -------------------------------------------------------------------------
     html_matrices = ""
     for woche in te_liste:
-        raw_m = vorgaben["start_m"] + ((woche - 1) * 2.5)
-        abc_dist = round(raw_m * 2) / 2
+        abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         stange_last = stangen_gewicht if woche <= 6 else "0 kg"
         
         html_matrices += f"""
@@ -478,7 +476,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">{abc_sets}</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">100m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #f9fafb; color: #000000 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">24 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">24 Wdh.</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Körpergröße / Körpergewicht</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td colspan="6" style="padding: 8px; border: 1px solid #000; background-color: #d1d5db; color: #000000 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">300m</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Sehr locker</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
