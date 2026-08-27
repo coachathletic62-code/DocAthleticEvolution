@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.84)
-# Architektur: 3-Stufig | Basis 18.75 + Skalierte 16px Druckmatrix & 2.5m Raster
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.85)
+# Architektur: 3-Stufig | 16px Druckmatrix | 2.5m Raster | Zwingende 60m Korrelation
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -81,6 +81,7 @@ if st.session_state.auth_modus is None:
 if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
+# DATENBANK: HIER KÖRPERGRÖSSEN PERMANENT KORRIGIEREN
 if 'kader_db' not in st.session_state:
     st.session_state.kader_db = {
         "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.20},
@@ -209,11 +210,14 @@ elif st.session_state.navigations_status == 'Operativ':
         
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
+        # MASTER-VARIABLE 60m
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
+    # ZWINGENDE DYNAMISCHE KORRELATION (150m ist immer 60m * 2.375)
     auto_150 = round(t_60 * 2.375, 2)
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        t_150 = st.number_input("150m-Referenz (s) [Auto-Korreliert]", min_value=10.0, max_value=40.0, value=auto_150, step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         col_bs1, col_bs2 = st.columns(2)
         with col_bs1:
@@ -228,7 +232,7 @@ elif st.session_state.navigations_status == 'Operativ':
                     "t_60": float(t_60),
                     "t_150": float(t_150)
                 }
-                st.success(f"Profil, Größe ({groesse}m) und Bestzeiten für {ziel} permanent verankert.")
+                st.success(f"Profil für {ziel} gesichert. (Achtung: Hard-Reload löscht diesen temporären RAM-Speicher!)")
         with col_bs2:
             if len(st.session_state.kader_db) > 1:
                 if st.button(f"🗑️ Athlet {ziel} aus Kader löschen"):
@@ -255,7 +259,7 @@ elif st.session_state.navigations_status == 'Operativ':
             with nc_z1:
                 neu_t60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=7.50, step=0.01, key="n_t60")
             with nc_z2:
-                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=18.00, step=0.01, key="n_t150")
+                neu_t150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=round(7.50 * 2.375, 2), step=0.01, key="n_t150")
                 
             if st.button("Athlet anlegen & in Datenbank verankern"):
                 if neu_name.strip():
@@ -353,7 +357,6 @@ elif st.session_state.navigations_status == 'Operativ':
     protokoll = []
     
     for woche in te_liste:
-        # Exaktes Runden auf 2.5-Meter-Schritte (15m, 17.5m, 20m, 22.5m usw.)
         raw_m = vorgaben["start_m"] + ((woche - 1) * 2.5)
         abc_dist = round(raw_m * 2) / 2
         
