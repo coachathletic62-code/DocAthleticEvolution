@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.98)
-# Architektur: Finale Korrektur Dateiname Front_Squat_Jumps.mp4
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.99)
+# Architektur: Anonymisierter Gast-Kader & Kompakte Video-Skalierung
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -85,20 +85,26 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
-# Kader-Datenbank mit Mathildas echten Ist-Daten (60m: 8.90s auf Asphalt)
+# Dynamische Kader-Datenbank: Im Gastmodus komplett anonymisiert (Platzhalter)
 if 'kader_db' not in st.session_state:
-    st.session_state.kader_db = {
-        "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.90, "t_150": 21.14},
-        "Sari Saeland": {"alter": 19, "groesse": 1.58, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
-        "Ronja Borchmeyer": {"alter": 20, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
-        "Svenja Poock": {"alter": 20, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
-        "Nora Giannori": {"alter": 22, "groesse": 1.77, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
-        "Mieke Schiemann": {"alter": 24, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
-        "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60},
-        "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30},
-        "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00},
-        "Franziska Nimmich": {"alter": 13, "groesse": 1.71, "profil": "Leichtathletik_U14", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Frühentwickler (Akzeleriert)", "sbe": "SR 1", "t_60": 7.90}
-    }
+    if st.session_state.auth_modus == "gast":
+        st.session_state.kader_db = {
+            "Gast-Testathlet A": {"alter": 16, "groesse": 1.75, "profil": "Fussball_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.80, "t_150": 18.50},
+            "Gast-Testathletin B": {"alter": 15, "groesse": 1.65, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20}
+        }
+    else:
+        st.session_state.kader_db = {
+            "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.90, "t_150": 21.14},
+            "Sari Saeland": {"alter": 19, "groesse": 1.58, "profil": "Fussball_U19_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
+            "Ronja Borchmeyer": {"alter": 20, "groesse": 1.70, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
+            "Svenja Poock": {"alter": 20, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
+            "Nora Giannori": {"alter": 22, "groesse": 1.77, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
+            "Mieke Schiemann": {"alter": 24, "groesse": 1.78, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
+            "Christoffer Danders": {"alter": 19, "groesse": 1.78, "profil": "Fussball_U19_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60},
+            "Matthias Mattusch": {"alter": 14, "groesse": 1.70, "profil": "Fussball_U15_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.30},
+            "Fred Lohmann": {"alter": 19, "groesse": 1.82, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.00},
+            "Franziska Nimmich": {"alter": 13, "groesse": 1.71, "profil": "Leichtathletik_U14", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Frühentwickler (Akzeleriert)", "sbe": "SR 1", "t_60": 7.90}
+        }
 
 if 'ist_protokoll' not in st.session_state:
     st.session_state.ist_protokoll = {}
@@ -128,7 +134,7 @@ abc_parameter = {
 }
 
 if st.session_state.auth_modus == "gast":
-    st.sidebar.warning("🔒 GAST-MODUS (Nur Leserechte, beschränkt auf TE 1 & TE 2)")
+    st.sidebar.warning("🔒 GAST-MODUS (Anonymisierte Testdatenaktivierung)")
 
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
@@ -160,7 +166,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 30px;'><strong>[Übersicht.png] Bilddatei im Verzeichnis hinterlegen.</strong></div>", unsafe_allow_html=True)
         
     st.markdown("---")
-    st.subheader("🎬 Leistungs-Videobibliothek (Exakte Dateinamens-Zuordnung)")
+    st.subheader("🎬 Leistungs-Videobibliothek (Kompakte Ansicht)")
     
     c_v1, c_v2 = st.columns(2)
     
@@ -170,7 +176,9 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Front_Squat_Jumps.mp4"):
-            st.video("Front_Squat_Jumps.mp4")
+            st.markdown('<div style="max-width: 340px;"><video width="100%" controls><source src="app/media/Front_Squat_Jumps.mp4" type="video/mp4">Dein Browser unterstützt kein Video.</video></div>', unsafe_allow_html=True)
+            # Fallback per Streamlit falls HTML Video-Pfad im Cloud-Container abweicht
+            st.video("Front_Squat_Jumps.mp4", format="video/mp4")
         else:
             st.warning("[Front_Squat_Jumps.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
@@ -189,7 +197,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
             st.warning("[One_Leg_Jumper.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Einbeinige Streckerkette (Triceps surae, Quadrizeps, Gluteus medius/maximus).</p>
-            <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen. Koordinative Kraft als Zug-Umsatz-Druck-Variante gegenüber freiem Hantel-Umsatz-Stoß.</p>
+            <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen. Koordinative Kraft als Zug-Umsatz-Druck-Variante.</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -324,8 +332,8 @@ elif st.session_state.navigations_status == 'Operativ':
     <strong>Doc Athletic Arbeitsphilosophie ("der andere Weg"):</strong> Die dargestellten Prognosewerte für den 12-Monats-Entwicklungszeitraum basieren ausnahmslos auf der konsequenten Durchführung der Trainingsplanung, Einhaltung aller ernährungsphysiologischen Vorgaben sowie der obligatorischen Beanspruchungsparameter (Neuromuskulärer Status, Morphologie, SBE/RPE als objektiver Datenpunkt, biomechanische Kettenstabilität).
     </div>
     """, unsafe_allow_html=True)
-    if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung is active.")
-    elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung is active.")
+    if "_w" in profil_soll: st.info("⚡ Weibliche Enzym-Kompensation & Individuelle Kurven-Kalibrierung ist aktiv.")
+    elif "_m" in profil_soll: st.info("⚡ Männliche Enzym-Kompensation & Laktat-Rechtsverschiebung ist aktiv.")
         
     res_col1, res_col2 = st.columns(2)
     calc_100 = round(t_60 * 1.615, 2)
