@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.02)
-# Architektur: Integration Leitmotiv (Option A) & Axiom "Aufgeben ist keine Option" (Option B)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.03)
+# Architektur: Dynamische 60m -> 150m Korrelation im Diagnose-Modul behoben
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -144,7 +144,6 @@ if st.session_state.auth_modus == "gast":
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
     
-    # OPTION A: Leitmotiv direkt auf der Startseite eingebunden
     st.markdown("""
     <div style="background-color: #0b0c10; border: 2px solid #66fcf1; border-radius: 8px; padding: 20px; text-align: center; margin: 30px auto; max-width: 800px;">
         <p style="color: #66fcf1 !important; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px;">DOC ATHLETIC TRAIN SMART PHILOSOPHIE</p>
@@ -316,9 +315,14 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
+    # DYNAMISCHE KORRELATION: 150m passt sich nun zwingend an die 60m-Eingabe an
     auto_150 = round(t_60 * 2.375, 2)
+    soll_150 = float(aktuelle_daten.get("t_150", auto_150))
+    if abs(soll_150 - (aktuelle_daten.get("t_60", 8.00) * 2.375)) > 0.5 and "t_60" in aktuelle_daten:
+        soll_150 = auto_150
+
     with diag_col2:
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=auto_150, step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         col_bs1, col_bs2 = st.columns(2)
@@ -581,7 +585,7 @@ elif st.session_state.navigations_status == 'Operativ':
         
     st.markdown(html_matrices, unsafe_allow_html=True)
 
-    # FINALES ABSCHLUSS-FOTO "Foto.jpg" MIT DEM NEUEN AXIOM (OPTION B)
+    # FINALES ABSCHLUSS-FOTO "Foto.jpg" MIT DEM AXIOM
     st.markdown("---")
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
