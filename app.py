@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.01)
-# Architektur: Harte CSS-Erzwingung der Videogröße (Thumbnail-Format)
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.02)
+# Architektur: Integration Leitmotiv (Option A) & Axiom "Aufgeben ist keine Option" (Option B)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -45,7 +45,6 @@ st.markdown("""
         background-color: #111111; border: 2px solid #45a29e; border-radius: 8px;
         padding: 15px; margin-bottom: 15px;
     }
-    /* Harter Zwang für alle eingebetteten Videos auf Mini-Format */
     video {
         width: 160px !important;
         height: 90px !important;
@@ -144,13 +143,22 @@ if st.session_state.auth_modus == "gast":
 
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
+    
+    # OPTION A: Leitmotiv direkt auf der Startseite eingebunden
+    st.markdown("""
+    <div style="background-color: #0b0c10; border: 2px solid #66fcf1; border-radius: 8px; padding: 20px; text-align: center; margin: 30px auto; max-width: 800px;">
+        <p style="color: #66fcf1 !important; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px;">DOC ATHLETIC TRAIN SMART PHILOSOPHIE</p>
+        <p style="color: #ffffff !important; font-size: 20px; font-style: italic; font-weight: 900;">„Das was du fühlst, ist nicht das was du kannst.“</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         try:
             st.image("logo.png", use_container_width=True)
         except:
             st.markdown("<div style='text-align: center; border: 1px solid #ea580c; padding: 20px;'>[logo.png] konnte auf GitHub nicht gefunden werden.</div>", unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
         st.button("SYSTEM INITIALISIEREN >>", on_click=navigiere, args=('Uebersicht',))
@@ -567,20 +575,21 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">Individuell</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #000; color: #000000 !important;"></td></tr>
             </table>
             <br>
-            <p style="text-align: center; font-size: 14px; margin-bottom: 0; color: #000000 !important;"><em>Doc Athletic Train Smart Philosophie — Aufgeben gilt nicht!</em></p>
+            <p style="text-align: center; font-size: 14px; margin-bottom: 0; color: #000000 !important;"><em>Doc Athletic Train Smart Philosophie — Aufgeben ist keine Option!</em></p>
         </div>
         """
         
     st.markdown(html_matrices, unsafe_allow_html=True)
 
-    # FINALES ABSCHLUSS-FOTO "Foto.jpg" MIT LEITSPRUCH
+    # FINALES ABSCHLUSS-FOTO "Foto.jpg" MIT DEM NEUEN AXIOM (OPTION B)
     st.markdown("---")
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
         st.markdown("""
         <div class="footer-box">
-            <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-            <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION</p>
+            <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben ist keine Option!</h2>
+            <p style="color: #ffffff; font-size: 13px; font-style: italic; margin-bottom: 5px;">„Das was du fühlst, ist nicht das was du kannst.“</p>
+            <p style="color: #c5c6c7; font-size: 11px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION</p>
         </div>
         """, unsafe_allow_html=True)
         try:
