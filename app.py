@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 18.99)
-# Architektur: Anonymisierter Gast-Kader & Kompakte Video-Skalierung
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.00)
+# Architektur: Drosselung der Videoanzeige (240px) & strikte TE 1 Begrenzung für Gäste
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -85,12 +85,11 @@ if st.session_state.auth_modus is None:
                 st.error("Ungültiger Code. Bitte prüfen.")
     st.stop()
 
-# Dynamische Kader-Datenbank: Im Gastmodus komplett anonymisiert (Platzhalter)
+# Kader-Datenbank: Im Gastmodus komplett anonymisiert
 if 'kader_db' not in st.session_state:
     if st.session_state.auth_modus == "gast":
         st.session_state.kader_db = {
-            "Gast-Testathlet A": {"alter": 16, "groesse": 1.75, "profil": "Fussball_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.80, "t_150": 18.50},
-            "Gast-Testathletin B": {"alter": 15, "groesse": 1.65, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50, "t_150": 20.20}
+            "Gast-Testathlet A": {"alter": 16, "groesse": 1.75, "profil": "Fussball_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.80, "t_150": 18.50}
         }
     else:
         st.session_state.kader_db = {
@@ -134,7 +133,7 @@ abc_parameter = {
 }
 
 if st.session_state.auth_modus == "gast":
-    st.sidebar.warning("🔒 GAST-MODUS (Anonymisierte Testdatenaktivierung)")
+    st.sidebar.warning("🔒 GAST-MODUS (Strikt auf TE 1 beschränkt)")
 
 if st.session_state.navigations_status == 'Start':
     st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 50px;'>DOC ATHLETIC EVOLUTION</h1>", unsafe_allow_html=True)
@@ -166,7 +165,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 30px;'><strong>[Übersicht.png] Bilddatei im Verzeichnis hinterlegen.</strong></div>", unsafe_allow_html=True)
         
     st.markdown("---")
-    st.subheader("🎬 Leistungs-Videobibliothek (Kompakte Ansicht)")
+    st.subheader("🎬 Leistungs-Videobibliothek (Kompakte Ansicht - 240px)")
     
     c_v1, c_v2 = st.columns(2)
     
@@ -176,8 +175,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Front_Squat_Jumps.mp4"):
-            st.markdown('<div style="max-width: 340px;"><video width="100%" controls><source src="app/media/Front_Squat_Jumps.mp4" type="video/mp4">Dein Browser unterstützt kein Video.</video></div>', unsafe_allow_html=True)
-            # Fallback per Streamlit falls HTML Video-Pfad im Cloud-Container abweicht
+            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Front_Squat_Jumps.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("Front_Squat_Jumps.mp4", format="video/mp4")
         else:
             st.warning("[Front_Squat_Jumps.mp4] nicht im Verzeichnis gefunden.")
@@ -192,12 +190,13 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">2. One Leg Jumper</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("One_Leg_Jumper.mp4"):
-            st.video("One_Leg_Jumper.mp4")
+            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/One_Leg_Jumper.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
+            st.video("One_Leg_Jumper.mp4", format="video/mp4")
         else:
             st.warning("[One_Leg_Jumper.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
             <p><strong>Beanspruchte Muskeln:</strong> Einbeinige Streckerkette (Triceps surae, Quadrizeps, Gluteus medius/maximus).</p>
-            <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen. Koordinative Kraft als Zug-Umsatz-Druck-Variante.</p>
+            <p><em>Zweck:</em> Seitensymmetrische Entwicklung der relevanten Muskelgruppen.</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -206,7 +205,8 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">3. Plyo-Hürden</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Plyo_Huerd..mp4"):
-            st.video("Plyo_Huerd..mp4")
+            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Plyo_Huerd..mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
+            st.video("Plyo_Huerd..mp4", format="video/mp4")
         else:
             st.warning("[Plyo_Huerd..mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
@@ -221,7 +221,8 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">4. Speedmaster</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("SPEED_MASTER.mp4"):
-            st.video("SPEED_MASTER.mp4")
+            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/SPEED_MASTER.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
+            st.video("SPEED_MASTER.mp4", format="video/mp4")
         else:
             st.warning("[SPEED_MASTER.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
@@ -236,7 +237,8 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">5. Zugumsatzstoß</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Zug_Ums._Stoß.mp4"):
-            st.video("Zug_Ums._Stoß.mp4")
+            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Zug_Ums._Stoß.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
+            st.video("Zug_Ums._Stoß.mp4", format="video/mp4")
         else:
             st.warning("[Zug_Ums._Stoß.mp4] nicht im Verzeichnis gefunden.")
         st.markdown("""
@@ -290,8 +292,14 @@ elif st.session_state.navigations_status == 'Operativ':
         reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, disabled=(st.session_state.auth_modus == "gast"))
             
     with c4:
-        te_auswahl_liste = [f"TE {i}" for i in range(1, 3)] if st.session_state.auth_modus == "gast" else [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"]
-        te_wahl = st.selectbox("Trainingseinheit (TE)", te_auswahl_liste)
+        if st.session_state.auth_modus == "gast":
+            te_auswahl_liste = ["TE 1"]
+            st.selectbox("Trainingseinheit (TE)", te_auswahl_liste, disabled=True)
+            te_wahl = "TE 1"
+        else:
+            te_auswahl_liste = [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"]
+            te_wahl = st.selectbox("Trainingseinheit (TE)", te_auswahl_liste)
+            
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
         
     diag_col1, diag_col2 = st.columns(2)
@@ -406,7 +414,7 @@ elif st.session_state.navigations_status == 'Operativ':
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     
-    te_liste = range(1, 3) if st.session_state.auth_modus == "gast" and "Alle" not in te_wahl else (range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))])
+    te_liste = [1] if st.session_state.auth_modus == "gast" else (range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))])
     protokoll = []
     
     for woche in te_liste:
