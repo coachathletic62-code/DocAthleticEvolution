@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.00)
-# Architektur: Drosselung der Videoanzeige (240px) & strikte TE 1 Begrenzung für Gäste
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.01)
+# Architektur: Harte CSS-Erzwingung der Videogröße (Thumbnail-Format)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -44,6 +44,13 @@ st.markdown("""
     .video-grid {
         background-color: #111111; border: 2px solid #45a29e; border-radius: 8px;
         padding: 15px; margin-bottom: 15px;
+    }
+    /* Harter Zwang für alle eingebetteten Videos auf Mini-Format */
+    video {
+        width: 160px !important;
+        height: 90px !important;
+        object-fit: cover !important;
+        border-radius: 4px !important;
     }
     .footer-box {
         text-align: center; border: 2px solid #66fcf1; border-radius: 10px;
@@ -165,7 +172,7 @@ elif st.session_state.navigations_status == 'Uebersicht':
         st.markdown("<div style='text-align: center; border: 1px dashed #45a29e; padding: 30px;'><strong>[Übersicht.png] Bilddatei im Verzeichnis hinterlegen.</strong></div>", unsafe_allow_html=True)
         
     st.markdown("---")
-    st.subheader("🎬 Leistungs-Videobibliothek (Kompakte Ansicht - 240px)")
+    st.subheader("🎬 Leistungs-Videobibliothek (Miniatur-Vorschau)")
     
     c_v1, c_v2 = st.columns(2)
     
@@ -175,7 +182,6 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">1. Front Squat Jumps</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Front_Squat_Jumps.mp4"):
-            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Front_Squat_Jumps.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("Front_Squat_Jumps.mp4", format="video/mp4")
         else:
             st.warning("[Front_Squat_Jumps.mp4] nicht im Verzeichnis gefunden.")
@@ -190,7 +196,6 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">2. One Leg Jumper</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("One_Leg_Jumper.mp4"):
-            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/One_Leg_Jumper.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("One_Leg_Jumper.mp4", format="video/mp4")
         else:
             st.warning("[One_Leg_Jumper.mp4] nicht im Verzeichnis gefunden.")
@@ -205,7 +210,6 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">3. Plyo-Hürden</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Plyo_Huerd..mp4"):
-            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Plyo_Huerd..mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("Plyo_Huerd..mp4", format="video/mp4")
         else:
             st.warning("[Plyo_Huerd..mp4] nicht im Verzeichnis gefunden.")
@@ -221,7 +225,6 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">4. Speedmaster</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("SPEED_MASTER.mp4"):
-            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/SPEED_MASTER.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("SPEED_MASTER.mp4", format="video/mp4")
         else:
             st.warning("[SPEED_MASTER.mp4] nicht im Verzeichnis gefunden.")
@@ -237,7 +240,6 @@ elif st.session_state.navigations_status == 'Uebersicht':
             <h4 style="color: #66fcf1 !important; margin-top: 0;">5. Zugumsatzstoß</h4>
         """, unsafe_allow_html=True)
         if os.path.exists("Zug_Ums._Stoß.mp4"):
-            st.markdown('<div style="width: 240px;"><video width="100%" controls><source src="app/media/Zug_Ums._Stoß.mp4" type="video/mp4"></video></div>', unsafe_allow_html=True)
             st.video("Zug_Ums._Stoß.mp4", format="video/mp4")
         else:
             st.warning("[Zug_Ums._Stoß.mp4] nicht im Verzeichnis gefunden.")
