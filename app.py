@@ -1,6 +1,6 @@
 # =========================================================================
-# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.03)
-# Architektur: Dynamische 60m -> 150m Korrelation im Diagnose-Modul behoben
+# DOC ATHLETIC EVOLUTION - WEB-MASTER (Version 19.04)
+# Architektur: Stabiles Fundament Fußball / Leichtathletik (Druckmatrix & Live-Regression)
 # =========================================================================
 import streamlit as st
 import pandas as pd
@@ -315,12 +315,7 @@ elif st.session_state.navigations_status == 'Operativ':
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 8.00)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
-    # DYNAMISCHE KORRELATION: 150m passt sich nun zwingend an die 60m-Eingabe an
     auto_150 = round(t_60 * 2.375, 2)
-    soll_150 = float(aktuelle_daten.get("t_150", auto_150))
-    if abs(soll_150 - (aktuelle_daten.get("t_60", 8.00) * 2.375)) > 0.5 and "t_60" in aktuelle_daten:
-        soll_150 = auto_150
-
     with diag_col2:
         t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=auto_150, step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     
