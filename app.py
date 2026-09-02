@@ -1,12 +1,12 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.4)
-# Architektur: Integrierte 75m-Tempotabelle & Korrekte Hardware-Zuordnung
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.5)
+# Architektur: Bereinigte Hardware-Logik für Kader & Erwachsene (Ohne GZ-Entlastung)
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.4", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.5", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -35,28 +35,6 @@ button[title="View fullscreen"] { display: none !important; }
 .steuermatrix {
     background-color: #111111; border: 2px solid #333333;
     border-radius: 5px; padding: 15px; margin-bottom: 20px;
-}
-.philosophie-box {
-    background-color: #0b0c10; border-left: 4px solid #66fcf1;
-    padding: 12px; margin-top: 10px; margin-bottom: 15px; font-size: 13px; color: #c5c6c7;
-}
-.stRadio > div {
-    display: flex;
-    flex-direction: row;
-    gap: 15px;
-    width: 100%;
-}
-.stRadio > div > label {
-    flex: 1;
-    background-color: #1f2833 !important;
-    border: 2px solid #45a29e;
-    border-radius: 10px;
-    padding: 15px !important;
-    text-align: center;
-    font-size: 16px !important;
-    font-weight: bold !important;
-    color: #ffffff !important;
-    cursor: pointer;
 }
 .badge-fussball { background-color: #2ecc71; color: #000000; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block; margin-top: 10px; }
 .badge-leichtathletik { background-color: #e74c3c; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block; margin-top: 10px; }
@@ -132,11 +110,6 @@ if 'kader_db' not in st.session_state:
         }
     }
 
-if 'ist_protokoll' not in st.session_state:
-    st.session_state.ist_protokoll = {}
-if 'te_anpassungen' not in st.session_state:
-    st.session_state.te_anpassungen = {}
-
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
 
@@ -186,7 +159,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.4</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.5</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Flagship Variante)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -317,16 +290,11 @@ elif st.session_state.navigations_status == 'Operativ':
 
     tempo_data = []
     for dist_m in [50, 75, 100, 150, 200]:
-        if dist_m == 50:
-            base_s = calc_100 / 1.93
-        elif dist_m == 75:
-            base_s = calc_100 * 0.775
-        elif dist_m == 100:
-            base_s = calc_100
-        elif dist_m == 150:
-            base_s = t_150
-        elif dist_m == 200:
-            base_s = calc_200
+        if dist_m == 50: base_s = calc_100 / 1.93
+        elif dist_m == 75: base_s = calc_100 * 0.775
+        elif dist_m == 100: base_s = calc_100
+        elif dist_m == 150: base_s = t_150
+        elif dist_m == 200: base_s = calc_200
         
         row = {
             "Distanz": f"{dist_m}m",
@@ -344,11 +312,16 @@ elif st.session_state.navigations_status == 'Operativ':
     st.subheader(f"Detaillierter Trainingsplan & 6-Blöcke-Ansicht: {ziel}")
     
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
-    abc_sets = vorgaben["sets"]
     te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
     
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
+    
+    # Block 3 Unterscheidung: U23/Hochleistung/Erwachsene erhalten reine Power Bars ohne GZ-Entlastung
+    if "U23" in profil_soll or "Hochleistung" in profil_soll or int(alter) >= 19:
+        block3_zusatz = f"Power Bar schwer ({basis_last})"
+    else:
+        block3_zusatz = "Speed Jumper (GZ Entlastung)"
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
@@ -382,7 +355,7 @@ elif st.session_state.navigations_status == 'Operativ':
         <tr><td style="padding: 8px; border: 1px solid #333333;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #333333;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #333333;">>80% ({abc_last_str})</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #333333;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">{basis_last}</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #333333;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #333333;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #333333;">Technik Squat Jumps (11°) & Last-Variante</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #333333;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">{block3_zusatz}</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 4: Tempoläufe</strong></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Spezifischer Umfang</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">{tl_saetze}</td><td style="padding: 8px; border: 1px solid #333333;">{tl_distanz}m TL</td><td style="padding: 8px; border: 1px solid #333333;">80% Vmax (Basis {calc_100:.2f}s)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">Gehp.</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 5: Ischiocrurale Sicherung</strong></td></tr>
@@ -409,7 +382,7 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""
         <div class="footer-box">
         <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.4</p>
+        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.5</p>
         </div>
         """, unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
