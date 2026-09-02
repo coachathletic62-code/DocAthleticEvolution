@@ -1,11 +1,12 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.1 - Fix)
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.2)
+# Architektur: Korrigierte Lasten-Logik (Lauf-ABC vs. Kraftkomplexe) & Vollständiger Code
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.1", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.2", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -170,11 +171,17 @@ abc_parameter = {
     "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
 
+# SEPARATE LOGIK: LAUF-ABC (GEWICHTSSTANGEN) VS. KRAFTKOMPLEXE (POWERBAGS)
+def get_lauf_abc_last(reife_i):
+    if reife_i == "Spätentwickler":
+        return "Gewichtsstangen 1 kg (Reduziert)"
+    return "Gewichtsstangen 2 kg"
+
 def get_power_bar_last(p_soll, reife_i):
-    if "U11" in p_soll: base = "Powerbag 5-8 kg"
-    elif "U13" in p_soll: base = "Powerbag 8-12 kg"
-    elif "U15_w" in p_soll: base = "Powerbag 10-14 kg"
-    elif "U15_m" in p_soll: base = "Powerbag 12-16 kg"
+    if "U11" in p_soll: base = "Powerbag 3-5 kg"
+    elif "U13" in p_soll: base = "Powerbag 5-8 kg"
+    elif "U15_w" in p_soll: base = "Powerbag 6-10 kg"
+    elif "U15_m" in p_soll: base = "Powerbag 8-12 kg"
     elif "U17" in p_soll or "U19" in p_soll: base = "Power Bars (5-8 kg)"
     else: base = "Power Bars / Hanteln (8-12 kg)"
     if reife_i == "Spätentwickler": return f"{base} (Reduziert)"
@@ -185,7 +192,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.1</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.2</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Flagship Variante)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -310,9 +317,9 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_sets = vorgaben["sets"]
     te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
     
+    # KORREKTE ZUWEISUNG DER LASTEN
+    abc_last_str = get_lauf_abc_last(reife_intern)
     basis_last = get_power_bar_last(profil_soll, reife_intern)
-    stangen_gewicht = "Powerbag 5 kg" if "U11" in profil_soll else "Powerbag 10 kg" if "U15" in profil_soll else "Stange 3 kg"
-    if reife_intern == "Spätentwickler": stangen_gewicht += " (Reduziert)"
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
@@ -341,9 +348,9 @@ elif st.session_state.navigations_status == 'Operativ':
         </tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;"><strong>Block 1: Allg. Erwärmung</strong></td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #333333;">400m</td><td style="padding: 8px; border: 1px solid #333333;">Mobilisation</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Spez. Erw. (STL locker/freq.)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">5</td><td style="padding: 8px; border: 1px solid #333333;">2x100m u 3x60m</td><td style="padding: 8px; border: 1px solid #333333;">bis 80% Vmax</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">Trinkp.</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
-        <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 2: Neuromuskuläre Innervation</strong></td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #333333;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #333333;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #333333;">>80% ({stangen_gewicht})</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #333333;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #333333;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #333333;">>80% ({stangen_gewicht})</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
+        <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 2: Neuromuskuläre Innervation (Lauf-ABC)</strong></td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #333333;">Kniehebelauf & Anfersen</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #333333;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #333333;">>80% ({abc_last_str})</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #333333;">Nachstellschritte & Überkrl.</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2</td><td style="padding: 8px; border: 1px solid #333333;">{abc_dist:.1f}m hin/zurück</td><td style="padding: 8px; border: 1px solid #333333;">>80% ({abc_last_str})</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">2s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 3: Kompl. Kraftfähigkeiten</strong></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Squat-Stoß-Jumps</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">4</td><td style="padding: 8px; border: 1px solid #333333;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">{basis_last}</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1 min</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Technik Squat Jumps (11°) & Speed Jumper GZ Entlastung</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #333333;">{jumps_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">Speed Jumper (GZ Entlastung)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">90s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
@@ -373,7 +380,7 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""
         <div class="footer-box">
         <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.1</p>
+        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.2</p>
         </div>
         """, unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
