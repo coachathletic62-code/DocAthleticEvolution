@@ -1,12 +1,12 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.3)
-# Architektur: Korrigierte Hardware-Spezifikation (Lauf-ABC: 2kg Stangen / Block 3: Power Bars)
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.4)
+# Architektur: Integrierte 75m-Tempotabelle & Korrekte Hardware-Zuordnung
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.3", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.4", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -171,7 +171,6 @@ abc_parameter = {
     "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
 
-# KORREKTE HARDWARE-ZUWEISUNG: LAUF-ABC (GEWICHTSSTANGEN 2KG) VS. KRAFTKOMPLEXE (POWER BARS)
 def get_power_bar_last(p_soll, reife_i):
     if "U11" in p_soll: base = "Power Bar (3 kg)"
     elif "U13" in p_soll: base = "Power Bar (4 kg)"
@@ -187,7 +186,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.3</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.4</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Flagship Variante)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -292,9 +291,10 @@ elif st.session_state.navigations_status == 'Operativ':
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
     
     st.subheader("Diagnostik-Modul (Polynomische Regression)")
-    res_col1, res_col2 = st.columns(2)
     calc_100 = round(t_60 * 1.615, 2)
     calc_200 = round(t_60 * 3.265, 2)
+    
+    res_col1, res_col2 = st.columns(2)
     with res_col1:
         st.markdown("#### Aktuelle Ist-Korrelation")
         st.write(f"60m: **{t_60:.2f} s** | 100m: **{calc_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{calc_200:.2f} s**")
@@ -306,13 +306,47 @@ elif st.session_state.navigations_status == 'Operativ':
         st.write(f"Prognose 100m: **{p_100:.2f} s** | 200m: **{p_200:.2f} s**")
         
     st.markdown("---")
+    st.subheader(f"Tempotabellen (Echte Live-Korrelation mit 75m-Zwischenwert)")
+    
+    def format_time(seconds):
+        if seconds >= 60:
+            m = int(seconds // 60)
+            s = seconds % 60
+            return f"{m}:{s:04.1f} min"
+        return f"{seconds:.1f} s"
+
+    tempo_data = []
+    for dist_m in [50, 75, 100, 150, 200]:
+        if dist_m == 50:
+            base_s = calc_100 / 1.93
+        elif dist_m == 75:
+            base_s = calc_100 * 0.775
+        elif dist_m == 100:
+            base_s = calc_100
+        elif dist_m == 150:
+            base_s = t_150
+        elif dist_m == 200:
+            base_s = calc_200
+        
+        row = {
+            "Distanz": f"{dist_m}m",
+            "100%": format_time(base_s),
+            "95%": format_time(base_s / 0.95),
+            "90%": format_time(base_s / 0.90),
+            "80%": format_time(base_s / 0.80),
+            "70%": format_time(base_s / 0.70)
+        }
+        tempo_data.append(row)
+    
+    st.table(pd.DataFrame(tempo_data).set_index("Distanz"))
+    st.markdown("---")
+    
     st.subheader(f"Detaillierter Trainingsplan & 6-Blöcke-Ansicht: {ziel}")
     
     vorgaben = abc_parameter.get(profil_soll, {"sets": 4, "start_m": 15.0, "step_m": 2.5})
     abc_sets = vorgaben["sets"]
     te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
     
-    # HARDWARE-ZUGRIFF: LAUF-ABC FEST AUF 2KG GEWICHTSSTANGEN / KRAFTBLÖCKE AUF POWER BARS
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
@@ -355,7 +389,7 @@ elif st.session_state.navigations_status == 'Operativ':
         <tr><td style="padding: 8px; border: 1px solid #333333;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #333333;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #333333;">300m</td><td style="padding: 8px; border: 1px solid #333333;">Sehr locker</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #333333;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: `Individuell`</td><td style="padding: 8px; border: 1px solid #333333;">-</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #333333;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #333333;">Individuell</td><td style="padding: 8px; border: 1px solid #333333;">-</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         </table>
         </div>
         """, unsafe_allow_html=True)
@@ -375,7 +409,7 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""
         <div class="footer-box">
         <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.3</p>
+        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.4</p>
         </div>
         """, unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
