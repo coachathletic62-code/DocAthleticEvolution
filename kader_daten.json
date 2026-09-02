@@ -1,0 +1,49 @@
+{
+    "Matilda Karnik": {
+        "alter": 14,
+        "groesse": 1.57,
+        "profil": "Fussball_U15_w",
+        "fasertyp": "Gazelle",
+        "reife": "Spätentwickler",
+        "hinweis": "Biologische Reifungsverzögerung / Stagnation"
+    },
+    "Ronja Borchmeyer": {
+        "alter": 20,
+        "groesse": 170.0,
+        "profil": "Fussball_U23_w",
+        "hinweis": "Standard-Kader",
+        "fasertyp": "Kraft",
+        "reife": "Normalentwickler"
+    },
+    "Mieke Schiemann": {
+        "alter": 23,
+        "groesse": 178.0,
+        "profil": "Fussball_U23_w",
+        "fasertyp": "Kraft",
+        "reife": "Normalentwickler",
+        "hinweis": "Standard-Kader"
+    },
+    "Sari Saelandt": {
+        "alter": 19,
+        "groesse": 158.0,
+        "profil": "Fussball_U23_w",
+        "hinweis": "Standard-Kader",
+        "fasertyp": "Kraft"
+    },
+    "Svenja Poock": {
+        "alter": 20,
+        "groesse": 178.0,
+        "profil": "Fussball_U23_w",
+        "fasertyp": "Kraft",
+        "reife": "Normalentwickler",
+        "hinweis": "Standard-Kader"
+    },
+    "U 15 Jungs": {
+        "alter": 14,
+        "groesse": 165.0,
+        "profil": "Fussball_U15_m",
+        "fasertyp": "Kraft",
+        "reife": "Normalentwickler",
+        "hinweis": ""
+    }
+}
