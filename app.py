@@ -1,12 +1,12 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.2)
-# Architektur: Korrigierte Lasten-Logik (Lauf-ABC vs. Kraftkomplexe) & Vollständiger Code
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.3)
+# Architektur: Korrigierte Hardware-Spezifikation (Lauf-ABC: 2kg Stangen / Block 3: Power Bars)
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.2", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.3", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -171,19 +171,14 @@ abc_parameter = {
     "Hochleistung_w": {"sets": 6, "start_m": 28.0, "step_m": 3.0, "sbe_ziel": "SR 0"}
 }
 
-# SEPARATE LOGIK: LAUF-ABC (GEWICHTSSTANGEN) VS. KRAFTKOMPLEXE (POWERBAGS)
-def get_lauf_abc_last(reife_i):
-    if reife_i == "Spätentwickler":
-        return "Gewichtsstangen 1 kg (Reduziert)"
-    return "Gewichtsstangen 2 kg"
-
+# KORREKTE HARDWARE-ZUWEISUNG: LAUF-ABC (GEWICHTSSTANGEN 2KG) VS. KRAFTKOMPLEXE (POWER BARS)
 def get_power_bar_last(p_soll, reife_i):
-    if "U11" in p_soll: base = "Powerbag 3-5 kg"
-    elif "U13" in p_soll: base = "Powerbag 5-8 kg"
-    elif "U15_w" in p_soll: base = "Powerbag 6-10 kg"
-    elif "U15_m" in p_soll: base = "Powerbag 8-12 kg"
-    elif "U17" in p_soll or "U19" in p_soll: base = "Power Bars (5-8 kg)"
-    else: base = "Power Bars / Hanteln (8-12 kg)"
+    if "U11" in p_soll: base = "Power Bar (3 kg)"
+    elif "U13" in p_soll: base = "Power Bar (4 kg)"
+    elif "U15_w" in p_soll: base = "Power Bar (4-6 kg)"
+    elif "U15_m" in p_soll: base = "Power Bar (6-8 kg)"
+    elif "U17" in p_soll or "U19" in p_soll: base = "Power Bars (8-10 kg)"
+    else: base = "Power Bars / Langhantel (10-14 kg)"
     if reife_i == "Spätentwickler": return f"{base} (Reduziert)"
     elif reife_i == "Frühentwickler": return f"{base} (Erhöht)"
     return base
@@ -192,7 +187,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.2</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.3</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Flagship Variante)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -317,8 +312,8 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_sets = vorgaben["sets"]
     te_liste = range(1, 15) if "Alle" in te_wahl else [int(te_wahl.replace("TE ", ""))]
     
-    # KORREKTE ZUWEISUNG DER LASTEN
-    abc_last_str = get_lauf_abc_last(reife_intern)
+    # HARDWARE-ZUGRIFF: LAUF-ABC FEST AUF 2KG GEWICHTSSTANGEN / KRAFTBLÖCKE AUF POWER BARS
+    abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
     for woche in te_liste:
@@ -360,7 +355,7 @@ elif st.session_state.navigations_status == 'Operativ':
         <tr><td style="padding: 8px; border: 1px solid #333333;">Leg Speed Curler</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">3</td><td style="padding: 8px; border: 1px solid #333333;">{curler_wdh} Wdh.</td><td style="padding: 8px; border: 1px solid #333333;">Körpergewicht</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">60s</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         <tr><td colspan="6" style="padding: 8px; border: 1px solid #333333; background-color: #1f2833; color: #66fcf1 !important;"><strong>Block 6: Abwärmen & Regeneration</strong></td></tr>
         <tr><td style="padding: 8px; border: 1px solid #333333;">Auslaufen (Shuttle)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #333333;">300m</td><td style="padding: 8px; border: 1px solid #333333;">Sehr locker</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #333333;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: 1px solid #333333;">Individuell</td><td style="padding: 8px; border: 1px solid #333333;">-</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
+        <tr><td style="padding: 8px; border: 1px solid #333333;">Statische Dehnung (Tonus)</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">1</td><td style="padding: 8px; border: `Individuell`</td><td style="padding: 8px; border: 1px solid #333333;">-</td><td style="padding: 8px; border: 1px solid #333333; text-align: center;">-</td><td style="padding: 8px; border: 1px solid #333333;"></td></tr>
         </table>
         </div>
         """, unsafe_allow_html=True)
@@ -380,7 +375,7 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""
         <div class="footer-box">
         <h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.2</p>
+        <p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.3</p>
         </div>
         """, unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
