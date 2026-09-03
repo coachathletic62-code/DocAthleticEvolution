@@ -1,7 +1,6 @@
 # ==============================================================================
 # DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.7)
-# Architektur: Vollständiger Quellcode mit Geschlechter-Steuerung, Hürden-Progression 
-# und präzisierten Block-Parametern
+# Architektur: Vollständiger Quellcode mit individueller ZL für Speed Jumper ab U16
 # ==============================================================================
 import streamlit as st
 import pandas as pd
@@ -334,11 +333,11 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
-    # Korrektur der Hardware-Last: Keine GZ-Entlastung bei U16/Kader/Erwachsenen, saubere Technik-Schulung
+    # Korrektur der Hardware-Last: Keine GZ-Entlastung bei U16+, stattdessen ZL individuell
     if int(alter) < 16 and reife_intern == "Spätentwickler":
         block3_zusatz = "Speed Jumper (GZ Entlastung)"
     else:
-        block3_zusatz = f"Speed Jumper / Technik-Schulung ({basis_last})"
+        block3_zusatz = "Speed Jumper (ZL individuell)"
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
