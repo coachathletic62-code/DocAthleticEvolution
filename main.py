@@ -491,12 +491,11 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown(html_matrix, unsafe_allow_html=True)
 
     st.markdown("---")
-st.download_button(
+    st.download_button(
     label="💾 Trainingsplan als HTML direkt im Download-Ordner speichern",
     data=html_matrix,
     file_name="Doc_Athletic_Trainingsplan.html",
-    mime="text/html"
-)
+    mime="text/html")
 
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
