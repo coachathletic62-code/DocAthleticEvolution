@@ -1,6 +1,6 @@
 # ==============================================================================
 # DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.6)
-# Architektur: Vollständiger Quellcode mit integrierter Doc-Athletic-Tabellenarchitektur
+# Architektur: Vollständiger Quellcode mit korrekter UI-Platzierung der Druckfunktion
 # ==============================================================================
 import streamlit as st
 import pandas as pd
@@ -345,8 +345,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
         tl_saetze = 4 if int(alter) <= 14 else 5
 
-        # Integrierte Doc Athletic Farbkonsistenz nach Vorgabe (v22.6)
-        # Kopfzeile: #1F4E78 | Vorbereitung: #FFF2CC | Block 1 ABC: #DDEBF7 | Block 1 Reiz: #BDD7EE | Komplex: #FCE4D6 | Kraft: #E2EFDA | Cool-Down: #F2F2F2
         html_matrix = f"""
         <div class="druck-block" style="background-color: #111111; color: #ffffff; border: 2px solid #45a29e; border-radius: 8px; padding: 20px; margin-top: 20px; font-family: Arial, sans-serif;">
             <h3 style="border-bottom: 2px solid #66fcf1; padding-bottom: 5px; margin-top: 0; color: #66fcf1 !important;">TRAININGSMATRIX - EINHEIT: TE {woche}</h3>
@@ -365,7 +363,6 @@ elif st.session_state.navigations_status == 'Operativ':
                 </tr>
               </thead>
               <tbody>
-                <!-- Vorbereitung / Erwärmung (#FFF2CC) -->
                 <tr style="background-color: #FFF2CC;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Vorbereitung</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Shuttle-Einlaufen (Feldlinien)</td>
@@ -386,7 +383,6 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">Trinkp.</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
-                <!-- Block 1: ABC (#DDEBF7) -->
                 <tr style="background-color: #DDEBF7;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 1: ABC</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Kniehebelauf & Anfersen</td>
@@ -407,7 +403,6 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">2s</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
-                <!-- Block 1: Reiz (#BDD7EE) -->
                 <tr style="background-color: #BDD7EE;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 1: Reiz</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Hürdensteigesprünge & Alpha-Reiz</td>
@@ -418,7 +413,6 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3 min</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
-                <!-- Block 2: Komplex / Laktat (#FCE4D6) -->
                 <tr style="background-color: #FCE4D6;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Komplex</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Squat-Stoß-Jumps</td>
@@ -449,7 +443,6 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">Gehp.</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
-                <!-- Block 3: Kraft & Sicherung (#E2EFDA) -->
                 <tr style="background-color: #E2EFDA;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 3: Kraft</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Leg Speed Curler (Ischiocrurale Sicherung)</td>
@@ -460,7 +453,6 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">60s</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
-                <!-- Cool-Down / Regeneration (#F2F2F2) -->
                 <tr style="background-color: #F2F2F2;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Cool-Down</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Auslaufen (Shuttle)</td>
@@ -487,10 +479,11 @@ elif st.session_state.navigations_status == 'Operativ':
         """
         st.markdown(html_matrix, unsafe_allow_html=True)
 
-st.markdown("---")
-st.markdown("""<div style="text-align: center; margin: 30px 0;"><button onclick="window.print()" style="background-color: #66fcf1; color: #000000; border: none; border-radius: 8px; padding: 15px 30px; font-weight: 900; cursor: pointer; font-size: 16px;">🖨️ ANSICHT DIREKT ALS PDF / DRUCKEN (WLAN)</button></div>""", unsafe_allow_html=True)
+    # Druck-Button und Footer korrekt innerhalb der operativen Ansicht platziert
+    st.markdown("---")
+    st.markdown("""<div style="text-align: center; margin: 30px 0;"><button onclick="window.print()" style="background-color: #66fcf1; color: #000000; border: none; border-radius: 8px; padding: 15px 30px; font-weight: 900; cursor: pointer; font-size: 16px;">🖨️ ANSICHT DIREKT ALS PDF / DRUCKEN (WLAN)</button></div>""", unsafe_allow_html=True)
 
-col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
-with col_f2:
-    st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.6</p></div>""", unsafe_allow_html=True)
-    lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
+    col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
+    with col_f2:
+        st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.6</p></div>""", unsafe_allow_html=True)
+        lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
