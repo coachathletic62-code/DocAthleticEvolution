@@ -1,12 +1,12 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.7)
-# Architektur: Vollständiger Quellcode mit individueller ZL für Speed Jumper ab U16
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.8)
+# Architektur: Vollständiger Quellcode mit strikter ZL-Logik ab U16
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.7", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.8", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -164,8 +164,8 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.7</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Mit hormoneller Geschlechter-Verknüpfung & Hürden-Progression)</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.8</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Mit hormoneller Geschlechter-Verknüpfung & strikter Last-Logik)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         lade_bild(["logo.png", "logo.png.png", "logo"], use_col=True)
@@ -333,11 +333,12 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
-    # Korrektur der Hardware-Last: Keine GZ-Entlastung bei U16+, stattdessen ZL individuell
-    if int(alter) < 16 and reife_intern == "Spätentwickler":
-        block3_zusatz = "Speed Jumper (GZ Entlastung)"
+    # Korrektur der Hardware-Last: GZ-Entlastung strikt nur noch bis U15 (<= 14 Jahre) bei retardierter Entwicklung.
+    # Ab 15 Jahren (U16+) ausnahmslos "ZL individuell" für Speed Jumper und Squat Master.
+    if int(alter) <= 14 and reife_intern == "Spätentwickler":
+        block3_zusatz = "GZ Entlastung"
     else:
-        block3_zusatz = "Speed Jumper (ZL individuell)"
+        block3_zusatz = "ZL individuell"
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
@@ -435,7 +436,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 </tr>
                 <tr style="background-color: #FCE4D6;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Komplex</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Speed Jumper / Hardware</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Speed Jumper / Squat Master</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{jumps_wdh} Wdh.</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{block3_zusatz}</td>
@@ -494,5 +495,5 @@ elif st.session_state.navigations_status == 'Operativ':
 
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
-        st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.7</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.8</p></div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
