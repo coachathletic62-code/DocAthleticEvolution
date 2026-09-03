@@ -1,12 +1,13 @@
 # ==============================================================================
-# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.6)
-# Architektur: Vollständiger Quellcode mit korrekter UI-Platzierung der Druckfunktion
+# DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.7)
+# Architektur: Vollständiger Quellcode mit Geschlechter-Steuerung, Hürden-Progression 
+# und präzisierten Block-Parametern
 # ==============================================================================
 import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="Doc Athletic Evolution 22.6", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 22.7", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -164,8 +165,8 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.6</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Flagship Variante mit Farbkodierungs-Standard)</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 22.7</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Multi-Sport Master Edition (Mit hormoneller Geschlechter-Verknüpfung & Hürden-Progression)</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         lade_bild(["logo.png", "logo.png.png", "logo"], use_col=True)
@@ -232,27 +233,36 @@ elif st.session_state.navigations_status == 'Operativ':
 
     with c2:
         alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]), disabled=(st.session_state.auth_modus == "gast"))
-        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten["groesse"]), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        # Hormonelle Geschlechter-Anwahl zur Verknüpfung
+        geschlecht_wahl = st.selectbox("Geschlecht (Hormoneller Status)", ["Männlich", "Weiblich"], index=1 if "w" in profil_soll or "Weiblich" in str(aktuelle_daten.get("profil","")) else 0)
 
     with c3:
+        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten["groesse"]), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
         reife_liste = ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]
         ft_idx = ft_liste.index(aktuelle_daten["fasertyp"]) if aktuelle_daten["fasertyp"] in ft_liste else 4
         ft = st.selectbox("Fasertyp", ft_liste, index=ft_idx, disabled=(st.session_state.auth_modus == "gast"))
+
+    with c4:
         reife_val = aktuelle_daten["reife"]
         r_idx = 0 if "Spät" in reife_val else 2 if "Früh" in reife_val else 1
         reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, disabled=(st.session_state.auth_modus == "gast"))
-
-    with c4:
         te_wahl = st.selectbox("Trainingseinheit (TE)", [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"])
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
+
+    # Automatische Anpassung des Profil-Suffix (_m / _w) basierend auf der Geschlechter-Anwahl
+    if modus == "Gruppe / Team (Kader)":
+        base_prof = profil_soll.rsplit('_', 1)[0] if ('_m' in profil_soll or '_w' in profil_soll) else profil_soll
+        suffix = "_w" if geschlecht_wahl == "Weiblich" else "_m"
+        if f"{base_prof}{suffix}" in abc_parameter:
+            profil_soll = f"{base_prof}{suffix}"
 
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
         t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.80)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
     with diag_col2:
         auto_150 = round(t_60 * 2.375, 2)
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("150", auto_150) if "150" in aktuelle_daten else auto_150), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
 
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="")
@@ -324,31 +334,32 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
-    if "U23" in profil_soll or "Hochleistung" in profil_soll or int(alter) >= 19:
-        block3_zusatz = f"Power Bar schwer ({basis_last})"
-    else:
+    # Korrektur der Hardware-Last: Keine GZ-Entlastung bei U16/Kader/Erwachsenen, saubere Technik-Schulung
+    if int(alter) < 16 and reife_intern == "Spätentwickler":
         block3_zusatz = "Speed Jumper (GZ Entlastung)"
+    else:
+        block3_zusatz = f"Speed Jumper / Technik-Schulung ({basis_last})"
 
     for woche in te_liste:
         abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
         curler_wdh = 20 + (woche - 1) * 1
         jumps_wdh = 10 + (woche - 1) * 1
 
-        if int(alter) <= 16:
-            tl_distanz = 75 + (woche - 1) * 10
-            if tl_distanz > 150:
-                tl_distanz = 150
+        # Hürden-Progression über 12 Einheiten
+        if woche <= 4:
+            hurden_text = "2 Serien à 4 Durchgänge (8 Hürden, Höhe 45 cm)"
+        elif woche <= 8:
+            hurden_text = "2 Serien à 5 Durchgänge (10 Hürden, Höhe 45 cm)"
         else:
-            tl_distanz = 75 + (woche - 1) * 25
-            if tl_distanz > 200:
-                tl_distanz = 200
+            hurden_text = "4 Serien à 2 Durchgänge (8 Hürden, Höhe 55 cm)"
 
-        tl_saetze = 4 if int(alter) <= 14 else 5
+        tl_distanz = 75
+        tl_saetze = 4
 
         html_matrix = f"""
         <div class="druck-block" style="background-color: #111111; color: #ffffff; border: 2px solid #45a29e; border-radius: 8px; padding: 20px; margin-top: 20px; font-family: Arial, sans-serif;">
             <h3 style="border-bottom: 2px solid #66fcf1; padding-bottom: 5px; margin-top: 0; color: #66fcf1 !important;">TRAININGSMATRIX - EINHEIT: TE {woche}</h3>
-            <p style="color: #ffffff !important; font-size: 15px;"><strong>Athlet:</strong> {ziel} | <strong>Fasertyp:</strong> {ft} | <strong>SBE-Ziel:</strong> {sbe_ziel}</p>
+            <p style="color: #ffffff !important; font-size: 15px;"><strong>Athlet:</strong> {ziel} | <strong>Geschlecht:</strong> {geschlecht_wahl} | <strong>Fasertyp:</strong> {ft} | <strong>SBE-Ziel:</strong> {sbe_ziel}</p>
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #000000; border: 1px solid #7F7F7F;">
               <thead>
                 <tr style="background-color: #1F4E78; color: #FFFFFF; font-weight: bold;">
@@ -405,27 +416,27 @@ elif st.session_state.navigations_status == 'Operativ':
                 </tr>
                 <tr style="background-color: #BDD7EE;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 1: Reiz</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Hürdensteigesprünge & Alpha-Reiz</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center; font-weight: bold;">2</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">4 Durchgänge</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Hürdensteigesprünge (Progression)</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center; font-weight: bold;">Variabel</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{hurden_text}</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal explosiv</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3 min</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3 Min.</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Alpha-Motoneuronen & Koordination</td>
                 </tr>
                 <tr style="background-color: #FCE4D6;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Komplex</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Squat-Stoß-Jumps</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">4</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{jumps_wdh} Wdh.</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{basis_last}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{basis_last} (Technik)</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">1 min</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
                 <tr style="background-color: #FCE4D6;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Komplex</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Technik Squat Jumps & Last-Variante</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Speed Jumper / Hardware</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{jumps_wdh} Wdh.</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{block3_zusatz}</td>
@@ -437,10 +448,10 @@ elif st.session_state.navigations_status == 'Operativ':
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Laktat</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Spezifischer Tempolauf-Umfang</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_saetze}</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_distanz}m TL</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_distanz}m TL Shuttle</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">80% Vmax</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">Gehp.</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">30s Wende</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;"></td>
                 </tr>
                 <tr style="background-color: #E2EFDA;">
@@ -479,11 +490,10 @@ elif st.session_state.navigations_status == 'Operativ':
         """
         st.markdown(html_matrix, unsafe_allow_html=True)
 
-    # Druck-Button und Footer korrekt innerhalb der operativen Ansicht platziert
     st.markdown("---")
     st.markdown("""<div style="text-align: center; margin: 30px 0;"><button onclick="window.print()" style="background-color: #66fcf1; color: #000000; border: none; border-radius: 8px; padding: 15px 30px; font-weight: 900; cursor: pointer; font-size: 16px;">🖨️ ANSICHT DIREKT ALS PDF / DRUCKEN (WLAN)</button></div>""", unsafe_allow_html=True)
 
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
-        st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.6</p></div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="footer-box"><h2 style="color: #66fcf1 !important; margin-bottom: 10px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2><p style="color: #ffffff; font-size: 14px; letter-spacing: 1px;">DOC ATHLETIC EVOLUTION - 22.7</p></div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.jpg.jpg", "foto.jpg", "foto.jpg.jpg"], use_col=True)
