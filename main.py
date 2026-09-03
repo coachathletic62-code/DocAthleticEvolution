@@ -491,7 +491,12 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown(html_matrix, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("""<div style="text-align: center; margin: 30px 0;"><button onclick="window.print()" style="background-color: #66fcf1; color: #000000; border: none; border-radius: 8px; padding: 15px 30px; font-weight: 900; cursor: pointer; font-size: 16px;">🖨️ ANSICHT DIREKT ALS PDF / DRUCKEN (WLAN)</button></div>""", unsafe_allow_html=True)
+st.download_button(
+    label="💾 Trainingsplan als HTML direkt im Download-Ordner speichern",
+    data=html_matrix,
+    file_name="Doc_Athletic_Trainingsplan.html",
+    mime="text/html"
+)
 
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
