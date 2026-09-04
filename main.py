@@ -1,6 +1,6 @@
 # ==============================================================================
 # DOC ATHLETIC EVOLUTION - MULTI-SPORT MASTER EDITION (Version 22.8)
-# Architektur: Vollständiger Quellcode mit strikter ZL-Logik ab U16
+# Architektur: Vollständiger Quellcode mit strikter ZL-Logik ab U16 & UTF-8 Export
 # ==============================================================================
 import streamlit as st
 import pandas as pd
@@ -22,15 +22,19 @@ button[title="View fullscreen"] { display: none !important; }
     border: 2px solid #45a29e; border-radius: 8px;
     width: 100%; font-weight: bold;
 }
-.stDownloadButton > button {
-    background-color: #1f2833 !important;
-    color: #ffffff !important;
-    font-weight: 900 !important;
-    font-size: 15px !important;
-    border: 3px solid #66fcf1 !important;
+div.stDownloadButton > button {
+    background-color: #66fcf1 !important;
+    border: 2px solid #45a29e !important;
     border-radius: 8px !important;
     width: 100% !important;
     padding: 12px !important;
+}
+div.stDownloadButton > button *,
+div.stDownloadButton > button p,
+div.stDownloadButton > button span {
+    color: #000000 !important;
+    font-weight: 900 !important;
+    font-size: 15px !important;
 }
 .steuermatrix {
     background-color: #111111; border: 2px solid #333333;
@@ -232,7 +236,6 @@ elif st.session_state.navigations_status == 'Operativ':
 
     with c2:
         alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]), disabled=(st.session_state.auth_modus == "gast"))
-        # Hormonelle Geschlechter-Anwahl zur Verknüpfung
         geschlecht_wahl = st.selectbox("Geschlecht (Hormoneller Status)", ["Männlich", "Weiblich"], index=1 if "w" in profil_soll or "Weiblich" in str(aktuelle_daten.get("profil","")) else 0)
 
     with c3:
@@ -249,7 +252,6 @@ elif st.session_state.navigations_status == 'Operativ':
         te_wahl = st.selectbox("Trainingseinheit (TE)", [f"TE {i}" for i in range(1, 15)] + ["Alle TEs (1-14)"])
         sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
 
-    # Automatische Anpassung des Profil-Suffix (_m / _w) basierend auf der Geschlechter-Anwahl
     if modus == "Gruppe / Team (Kader)":
         base_prof = profil_soll.rsplit('_', 1)[0] if ('_m' in profil_soll or '_w' in profil_soll) else profil_soll
         suffix = "_w" if geschlecht_wahl == "Weiblich" else "_m"
@@ -333,8 +335,6 @@ elif st.session_state.navigations_status == 'Operativ':
     abc_last_str = "Gewichtsstangen (2 kg)"
     basis_last = get_power_bar_last(profil_soll, reife_intern)
 
-    # Korrektur der Hardware-Last: GZ-Entlastung strikt nur noch bis U15 (<= 14 Jahre) bei retardierter Entwicklung.
-    # Ab 15 Jahren (U16+) ausnahmslos "ZL individuell" für Speed Jumper und Squat Master.
     if int(alter) <= 14 and reife_intern == "Spätentwickler":
         block3_zusatz = "GZ Entlastung"
     else:
@@ -345,7 +345,6 @@ elif st.session_state.navigations_status == 'Operativ':
         curler_wdh = 20 + (woche - 1) * 1
         jumps_wdh = 10 + (woche - 1) * 1
 
-        # Hürden-Progression über 12 Einheiten
         if woche <= 4:
             hurden_text = "2 Serien à 4 Durchgänge (8 Hürden, Höhe 45 cm)"
         elif woche <= 8:
@@ -356,7 +355,7 @@ elif st.session_state.navigations_status == 'Operativ':
         tl_distanz = 75
         tl_saetze = 4
 
-        html_matrix = f"""
+        html_matrix = f"""<meta charset="utf-8">
         <div class="druck-block" style="background-color: #111111; color: #ffffff; border: 2px solid #45a29e; border-radius: 8px; padding: 20px; margin-top: 20px; font-family: Arial, sans-serif;">
             <h3 style="border-bottom: 2px solid #66fcf1; padding-bottom: 5px; margin-top: 0; color: #66fcf1 !important;">TRAININGSMATRIX - EINHEIT: TE {woche}</h3>
             <p style="color: #ffffff !important; font-size: 15px;"><strong>Athlet:</strong> {ziel} | <strong>Geschlecht:</strong> {geschlecht_wahl} | <strong>Fasertyp:</strong> {ft} | <strong>SBE-Ziel:</strong> {sbe_ziel}</p>
@@ -387,7 +386,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 <tr style="background-color: #FFF2CC;">
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Vorbereitung</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Spez. Erw. (STL locker/freq.)</td>
-                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">5</td>
+                  <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">5</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">2x100m u 3x60m</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td>
                   <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">bis 80% Vmax</td>
@@ -492,16 +491,17 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("---")
     st.download_button(
-    label="💾 Trainingsplan als HTML direkt im Download-Ordner speichern",
-    data=html_matrix,
-    file_name="Doc_Athletic_Trainingsplan.html",
-    mime="text/html")
+        label="💾 Trainingsplan als HTML direkt im Download-Ordner speichern",
+        data=html_matrix,
+        file_name="Doc_Athletic_Trainingsplan.html",
+        mime="text/html; charset=utf-8"
+    )
 
     col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
     with col_f2:
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
-        <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
-        <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">»Das, was du fühlst, ist nicht das, was du kannst.«</p>
-        <p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION - MULTISPORT</p>
-    </div>""", unsafe_allow_html=True)
-    lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
+            <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
+            <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">»Das, was du fühlst, ist nicht das, was du kannst.«</p>
+            <p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION - MULTISPORT</p>
+        </div>""", unsafe_allow_html=True)
+        lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
