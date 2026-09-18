@@ -1,6 +1,6 @@
 # ============================================================================
-# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.3)
-# Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Demo-Modus
+# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.4)
+# Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Sprungtests mit Verlauf
 # ============================================================================
 
 import streamlit as st
@@ -14,9 +14,10 @@ from copy import deepcopy
 from html import escape
 import hashlib
 import hmac
+from datetime import date
 from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.3", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.4", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -223,6 +224,40 @@ def build_tempo_table(t60, t150, source150, references, test_distance, test_seco
         result.append(row)
     return result
 
+JUMP_TESTS = {"hop_links": "Fünfer-Hop links", "hop_rechts": "Fünfer-Hop rechts", "schluss": "Fünfer-Schlusssprung"}
+
+def jump_summary(test):
+    best = {key: max(test[key], default=0) for key in JUMP_TESTS}
+    left, right = best["hop_links"], best["hop_rechts"]
+    both = left > 0 and right > 0
+    return {"Testdatum": test["datum"],
+        "Hop links (m)": left or None, "Hop rechts (m)": right or None,
+        "Schlusssprung (m)": best["schluss"] or None,
+        "Differenz (cm)": round(abs(left-right)*100, 1) if both else None,
+        "Abweichung (%)": round(abs(left-right)/max(left,right)*100, 2) if both else None,
+        "Größere Weite": ("gleich" if left == right else "links" if left > right else "rechts") if both else "noch offen",
+        "Techniknotizen": test["notizen"]}
+
+def validate_jump_tests(tests):
+    if not isinstance(tests, list) or len(tests) > 10000:
+        raise ValueError("Ungültiger Sprungtest-Verlauf.")
+    for test in tests:
+        if not isinstance(test, dict):
+            raise ValueError("Ungültiger Sprungtest.")
+        try:
+            date.fromisoformat(test.get("datum", ""))
+        except (ValueError, TypeError):
+            raise ValueError("Ungültiges Testdatum.") from None
+        if not isinstance(test.get("notizen"), str) or len(test["notizen"]) > 4000:
+            raise ValueError("Ungültige Techniknotizen.")
+        for key in JUMP_TESTS:
+            values = test.get(key)
+            if not isinstance(values, list) or len(values) != 3 or any(
+                type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 100 for v in values):
+                raise ValueError("Je Sprungtest sind drei Weiten zwischen 0 und 100 Metern erforderlich; 0 bedeutet nicht gewertet.")
+        if not any(v > 0 for key in JUMP_TESTS for v in test[key]):
+            raise ValueError("Mindestens eine gültige Sprungweite eintragen.")
+
 def validate_kader(kader):
     if not isinstance(kader, dict) or set(kader) != {"Fussball", "Leichtathletik"}:
         raise ValueError("Die Sicherung muss Fußball und Leichtathletik enthalten.")
@@ -262,6 +297,7 @@ def validate_kader(kader):
             for seconds in references.values():
                 if type(seconds) not in (int,float) or not math.isfinite(seconds) or not 0 <= seconds <= 1800:
                     raise ValueError("Testzeiten müssen zwischen 0 und 1800 Sekunden liegen; 0 bedeutet fehlend.")
+            validate_jump_tests(p.get("sprungtests", []))
             plan = p.get("planung", {})
             if not isinstance(plan, dict):
                 raise ValueError("Ungültige Planung.")
@@ -397,7 +433,7 @@ if st.session_state.get("auth_fingerprint") != auth_fingerprint:
     st.session_state.auth_fingerprint = auth_fingerprint
 
 if not TRAINER_CODE:
-    st.title("Doc Athletic Train Smart Evolution Software 23.8.3")
+    st.title("Doc Athletic Train Smart Evolution Software 23.8.4")
     st.info("Trainerzugang einrichten: In den Streamlit-Einstellungen unter Secrets den Eintrag DOC_ATHLETIC_TRAINER_CODE mit einem eigenen Zugangscode speichern. Danach die App neu laden.")
     st.stop()
 if DATABASE_URL:
@@ -520,7 +556,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.3</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.4</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -568,6 +604,7 @@ elif st.session_state.navigations_status == 'Operativ':
     aktive_athleten_db = st.session_state.kader_db[aktive_kategorie]
 
     athlete_actions = st.container()
+    jump_area = st.container()
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -722,6 +759,8 @@ elif st.session_state.navigations_status == 'Operativ':
                     raise ValueError("Dieser Name ist bereits vorhanden. Bitte das vorhandene Profil auswählen.")
                 updated = deepcopy(st.session_state.kader_db)
                 record = deepcopy(aktuelle_daten)
+                if neuer_name:
+                    record.pop("sprungtests", None)
                 record.update({"alter": int(alter), "groesse": float(groesse), "gewicht": float(gewicht), "profil": profil_soll,
                     "geschlecht": geschlecht_wahl, "fasertyp": ft, "reife": reife, "sbe": sbe_ziel,
                     "t_60": float(t_60), "t_150": float(t_150), "t_150_quelle": quelle_150, "planung":plan_settings, "tempo_referenzen":tempo_references})
@@ -733,6 +772,61 @@ elif st.session_state.navigations_status == 'Operativ':
                 st.rerun()
             except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
                 athlete_actions.error(f"Nicht gespeichert: {exc}")
+
+    with jump_area:
+        if modus == "Einzelathlet / Einzelathletin":
+            with st.expander("Sprungtests: Fünfer-Hop, Schlusssprung und Seitensymmetrie", expanded=False):
+                st.caption("Fünfer-Hop: fünf einbeinige Sprünge fortlaufend je Seite. Fünfer-Schlusssprung: fünf beidbeinige Sprünge ohne Haltepunkt. Gemessen wird jeweils die Gesamtweite in Metern; der beste von drei Versuchen zählt.")
+                st.caption("Abweichung = |links − rechts| / größere Bestweite × 100. Vergleich innerhalb desselben Testtermins, ohne automatische Bewertung. 0 bedeutet fehlend oder ungültig und wird nicht als Leistung gewertet.")
+                history = aktuelle_daten.get("sprungtests", [])
+                if history:
+                    st.dataframe(pd.DataFrame([jump_summary(t) for t in history]), hide_index=True, width="stretch")
+                    rows = []
+                    for test in history:
+                        row = jump_summary(test)
+                        for field, label in JUMP_TESTS.items():
+                            for i, value in enumerate(test[field], 1):
+                                row[f"{label}: Versuch {i} (m)"] = value or None
+                        rows.append(row)
+                    st.download_button("Sprungtest-Verlauf herunterladen (CSV)",
+                        pd.DataFrame(rows).to_csv(index=False, sep=";", decimal=",").encode("utf-8-sig"),
+                        file_name="Doc_Athletic_Sprungtests.csv", mime="text/csv")
+                else:
+                    st.info("Noch keine Sprungtests für dieses Profil gespeichert.")
+                if ziel not in aktive_athleten_db:
+                    st.info("Zuerst oben die Athletin oder den Athleten anlegen und speichern. Danach hier die Tests eintragen.")
+                elif not guest:
+                    st.write(f"Neuer Test für: {ziel}")
+                    st.caption("Dieser Knopf speichert nur den Test. Änderungen an den übrigen Profilwerten bitte zusätzlich oben speichern. Frühere Tests bleiben erhalten.")
+                    jump_epoch_key = key_for("sprung_epoch")
+                    jump_epoch = st.session_state.get(jump_epoch_key, 0)
+                    jump_key = lambda field: key_for(f"{field}_{jump_epoch}")
+                    with st.form(jump_key("sprungtest_form")):
+                        test_date = st.date_input("Datum des Sprungtests", value=date.today(), key=jump_key("sprungdatum"))
+                        attempts = {}
+                        for field, label in JUMP_TESTS.items():
+                            st.markdown(f"**{label}**")
+                            cols = st.columns(3)
+                            attempts[field] = [cols[i].number_input(
+                                f"{label} – Versuch {i+1} (m)", min_value=0.0, max_value=100.0,
+                                value=0.0, step=0.01, format="%.2f", key=jump_key(f"sprung_{field}_{i}")) for i in range(3)]
+                        notes = st.text_area("Technikbeobachtung / Bedingungen", max_chars=4000,
+                            help="Abrollen über den ganzen Fuß, Fuß-Knie-Hüftstreckung, Schwungbeineinsatz, Rhythmus sowie Untergrund und Schuhe.", key=jump_key("sprungnotizen"))
+                        add_test = st.form_submit_button("Sprungtest zum Verlauf speichern")
+                    if add_test:
+                        new_test = {"datum": test_date.isoformat(), "notizen": notes, **attempts}
+                        try:
+                            validate_jump_tests([new_test])
+                            updated = deepcopy(st.session_state.kader_db)
+                            updated[aktive_kategorie][ziel].setdefault("sprungtests", []).append(new_test)
+                            revision = speichere_kader_in_datei(updated, st.session_state.kader_revision)
+                            st.session_state.kader_db = updated
+                            st.session_state.kader_revision = revision
+                            st.session_state[jump_epoch_key] = jump_epoch + 1
+                            st.session_state.save_notice = f"Sprungtest für {ziel} gespeichert."
+                            st.rerun()
+                        except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
+                            st.error(f"Test nicht gespeichert: {exc}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1121,7 +1215,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.download_button(
         label="💾 Trainingsplan und Tempotabelle herunterladen",
-        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.3 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.4 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -1131,6 +1225,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.3</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.4</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
