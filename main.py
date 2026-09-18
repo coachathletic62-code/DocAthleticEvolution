@@ -1,5 +1,5 @@
 # ============================================================================
-# DOC ATHLETIC EVOLUTION - FUSSBALL & LEICHTATHLETIK (Version 23.8.1)
+# DOC ATHLETIC EVOLUTION - FUSSBALL & LEICHTATHLETIK (Version 23.8.2)
 # Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Demo-Modus
 # ============================================================================
 
@@ -16,7 +16,7 @@ import hashlib
 import hmac
 from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Evolution 23.8.1", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 23.8.2", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -133,7 +133,6 @@ def setting(name):
 TRAINER_CODE = setting("DOC_ATHLETIC_TRAINER_CODE")
 GAST_CODE = setting("DOC_ATHLETIC_GAST_CODE")
 DATABASE_URL = setting("DOC_ATHLETIC_DATABASE_URL")
-DEMO_MODE = not bool(TRAINER_CODE)
 if TRAINER_CODE and GAST_CODE and TRAINER_CODE == GAST_CODE:
     st.error("Trainer- und Gastcode müssen unterschiedlich sein.")
     st.stop()
@@ -144,20 +143,85 @@ DATA_DIR = Path(os.environ.get("DOC_ATHLETIC_DATA_DIR", str(Path(__file__).resol
 DB_FILE = DATA_DIR / "doc_athletic.sqlite3"
 KADER_DATEI = DATA_DIR / "kader_db.json"
 VALID_PROFILES = {'Fussball_U13', 'Leichtathletik_MASTER_w', 'Fussball_U23_m', 'Fussball_U23_w', 'Fussball_MASTER_w', 'Fussball_U20_m', 'Leichtathletik_MASTER_m', 'Leichtathletik_U17_m', 'Fussball_U17_w', 'Fussball_U15_w', 'Leichtathletik_U11', 'Leichtathletik_U15', 'Leichtathletik_U17_w', 'Leichtathletik_U20_w', 'Fussball_U15_m', 'Fussball_U17_m', 'Fussball_U20_w', 'Leichtathletik_U23_w', 'Fussball_MASTER_m', 'Leichtathletik_U20_m', 'Leichtathletik_U13', 'Leichtathletik_U23_m', 'Fussball_U11'}
-DEFAULT_KADER = {
-    "Fussball": {"Demo U15 weiblich": {
-        "alter":14, "groesse":1.60, "gewicht":50.0, "profil":"Fussball_U15_w",
-        "geschlecht":"Weiblich", "fasertyp":"Gazelle", "reife":"Normalentwickler",
-        "sbe":"SR 3", "t_60":8.9}},
-    "Leichtathletik": {"Demo U17 männlich": {
-        "alter":16, "groesse":1.75, "gewicht":65.0, "profil":"Leichtathletik_U17_m",
-        "geschlecht":"Männlich", "fasertyp":"Schnelligkeit (Sprint)",
-        "reife":"Normalentwickler", "sbe":"SR 2", "t_60":7.8}}
-}
+DEFAULT_KADER = {"Fussball": {}, "Leichtathletik": {}}
 
 
 class StorageConflict(Exception):
     pass
+
+TEMPO_DISTANCES = [50, 60, 75, 100, 150, 200] + list(range(250, 801, 50))
+TEMPO_PERCENTAGES = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50]
+
+def format_tempo_time(seconds):
+    # Round once before splitting, so 59.96 seconds becomes 1:00.0.
+    tenths = round(seconds * 10)
+    if tenths >= 600:
+        minutes, rest = divmod(tenths, 600)
+        return f"{minutes}:{rest / 10:04.1f} min"
+    return f"{tenths / 10:.1f} s"
+
+def estimate_time(distance, anchors, extrapolate):
+    points = sorted((int(d), float(t)) for d,t in anchors.items() if t > 0)
+    if len(points) < 2:
+        return None
+    left = [p for p in points if p[0] < distance]
+    right = [p for p in points if p[0] > distance]
+    if left and right:
+        (d1,t1),(d2,t2) = left[-1],right[0]
+        source = "Richtwert zwischen Referenzen"
+    elif extrapolate and left and distance > points[-1][0] and points[-1][0] >= 300 and distance <= min(800,2*points[-1][0]):
+        (d1,t1),(d2,t2) = points[-2:]
+        source = "Richtwert über längste Referenz hinaus"
+    else:
+        return None
+    if t2 <= t1:
+        return None
+    exponent = math.log(t2/t1) / math.log(d2/d1)
+    return t1 * (distance/d1)**exponent, source
+
+def build_tempo_table(t60, t150, source150, references, test_distance, test_seconds, interpolate=True, extrapolate=False):
+    calc100 = round(t60 * 1.615, 2)
+    modeled = {50:calc100 / 1.93, 75:calc100 * .775, 100:calc100,
+               150:t150, 200:round(t60 * 3.265,2)}
+    anchors = {60:t60}
+    if source150 != "berechnet":
+        anchors[150] = t150
+    if test_seconds > 0:
+        anchors[test_distance] = test_seconds
+    anchors.update({int(d):t for d,t in references.items() if t > 0})
+    result = []
+    for distance in TEMPO_DISTANCES:
+        explicit = references.get(str(distance), 0)
+        estimation = estimate_time(distance,anchors,extrapolate) if interpolate else None
+        if explicit > 0:
+            base, source = explicit, "Trainerreferenz"
+        elif distance == test_distance and test_seconds > 0:
+            base, source = test_seconds, "Referenz: Einzeltest"
+        elif distance == 60:
+            base, source = t60, "60-m-Referenz"
+        elif distance == 150 and source150 != "berechnet":
+            base, source = t150, "150-m-Referenz"
+        elif estimation is not None:
+            base,source = estimation
+        elif distance in modeled:
+            base,source = modeled[distance], "Richtwert aus Kurzsprint"
+        else:
+            base,source = None, "Längere Referenz ergänzen"
+        row = {"Distanz":f"{distance}m", "Herkunft":source}
+        for percent in TEMPO_PERCENTAGES:
+            seconds = base / (percent / 100) if base is not None else None
+            # Longer training runs use whole seconds; inputs retain their precision.
+            if seconds is None:
+                value = "—"
+            elif distance >= 250:
+                total = round(seconds)
+                minutes, rest = divmod(total,60)
+                value = f"{minutes}:{rest:02d} min" if minutes else f"{total} s"
+            else:
+                value = format_tempo_time(seconds)
+            row[f"{percent}%"] = value
+        result.append(row)
+    return result
 
 def validate_kader(kader):
     if not isinstance(kader, dict) or set(kader) != {"Fussball", "Leichtathletik"}:
@@ -192,6 +256,12 @@ def validate_kader(kader):
                     raise ValueError("Ungültige 150-m-Zeit.")
             if "t_150_quelle" in p and p["t_150_quelle"] not in ["gemessen", "berechnet", "ungeklärt"]:
                 raise ValueError("Ungültige Herkunft der 150-m-Zeit.")
+            references = p.get("tempo_referenzen", {})
+            if not isinstance(references, dict) or any(k not in {str(d) for d in [100,200,1500] + list(range(250,801,50))} for k in references):
+                raise ValueError("Ungültige Streckenreferenzen für die Tempotabelle.")
+            for seconds in references.values():
+                if type(seconds) not in (int,float) or not math.isfinite(seconds) or not 0 <= seconds <= 1800:
+                    raise ValueError("Testzeiten müssen zwischen 0 und 1800 Sekunden liegen; 0 bedeutet fehlend.")
             plan = p.get("planung", {})
             if not isinstance(plan, dict):
                 raise ValueError("Ungültige Planung.")
@@ -205,7 +275,7 @@ def validate_kader(kader):
                     raise ValueError(f"Ungültige Planung: {key}.")
                 if value is not None and key not in ("bag_last", "test_zeit") and int(value) != value:
                     raise ValueError(f"Ganze Zahl erforderlich: {key}.")
-            for key in ("progression", "kapazitaet20", "burpees_bestaetigt"):
+            for key in ("progression", "kapazitaet20", "burpees_bestaetigt", "tempo_interpolation", "tempo_extrapolation"):
                 if key in plan and type(plan[key]) is not bool:
                     raise ValueError(f"Ungültige Freigabe: {key}.")
             if "rolle" in plan and plan["rolle"] not in ["Automatisch nach Wochenrhythmus", "Haupttag", "Neuromuskulär / vor dem Spiel"]:
@@ -247,11 +317,6 @@ def remote_save(kader, expected_revision):
     return expected_revision + 1
 
 def lade_kader_von_datei():
-    if DEMO_MODE:
-        if "demo_saved" not in st.session_state:
-            st.session_state.demo_saved = (deepcopy(DEFAULT_KADER), 0)
-        data, rev = st.session_state.demo_saved
-        return validate_kader(data), rev
     if DATABASE_URL:
         return remote_load()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -273,12 +338,6 @@ def lade_kader_von_datei():
 
 def speichere_kader_in_datei(kader, expected_revision):
     validated = validate_kader(kader)
-    if DEMO_MODE:
-        _, rev = lade_kader_von_datei()
-        if rev != expected_revision:
-            raise StorageConflict("Bitte den gespeicherten Stand neu laden.")
-        st.session_state.demo_saved = (validated, rev + 1)
-        return rev + 1
     if DATABASE_URL:
         return remote_save(validated, expected_revision)
     payload = json.dumps(validated, ensure_ascii=False, allow_nan=False)
@@ -337,19 +396,14 @@ if st.session_state.get("auth_fingerprint") != auth_fingerprint:
     st.session_state.clear()
     st.session_state.auth_fingerprint = auth_fingerprint
 
-if DEMO_MODE:
-    st.warning("DEMO: ausschließlich Beispieldaten; Änderungen bleiben nur in dieser Sitzung. Für eigene Daten muss der Trainerzugang eingerichtet werden.")
-    if st.session_state.get("auth_modus") is None:
-        st.title("Doc Athletic Evolution 23.8.1")
-        if st.button("DEMO ÖFFNEN"):
-            st.session_state.auth_modus = "trainer"
-            st.rerun()
-        st.stop()
+if not TRAINER_CODE:
+    st.title("Doc Athletic Evolution 23.8.2")
+    st.info("Trainerzugang einrichten: In den Streamlit-Einstellungen unter Secrets den Eintrag DOC_ATHLETIC_TRAINER_CODE mit einem eigenen Zugangscode speichern. Danach die App neu laden.")
+    st.stop()
+if DATABASE_URL:
+    st.caption("Speicher: externe PostgreSQL-Datenbank")
 else:
-    if DATABASE_URL:
-        st.caption("Speicher: externe PostgreSQL-Datenbank")
-    else:
-        st.warning("Speicher: lokale App-Datei. Auf Streamlit Cloud nicht dauerhaft garantiert. Kader regelmäßig herunterladen; externe Datenbank noch einrichten.")
+    st.warning("Speicher: lokale App-Datei. Auf Streamlit Cloud nicht dauerhaft garantiert. Nach der Arbeit unter Kader-Datensicherung ein Backup herunterladen; externe Datenbank noch einrichten.")
 
 if 'auth_modus' not in st.session_state:
     st.session_state.auth_modus = None
@@ -466,7 +520,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 23.8.1</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 23.8.2</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -627,19 +681,45 @@ elif st.session_state.navigations_status == 'Operativ':
             if quelle_150 == "ungeklärt":
                 st.caption("Übernommener Wert: Bitte bestätigen, ob diese Zeit gemessen wurde.")
 
+    with st.expander("Referenzzeiten und Tempotabelle bis 800 m", expanded=True):
+        st.caption("Hier deine Referenzzeiten in Sekunden eintragen, z. B. 132 für 2:12 Minuten. Praktische Richtwerte sind möglich. 0 bedeutet: fehlt. Einlaufzeiten bleiben separat.")
+        reference_columns = st.columns(3)
+        saved_references = aktuelle_daten.get("tempo_referenzen", {})
+        tempo_references = {}
+        for index, distance in enumerate([100,200] + list(range(250,801,50)) + [1500]):
+            with reference_columns[index % 3]:
+                tempo_references[str(distance)] = st.number_input(
+                    f"{distance} m: Referenzzeit (s; 0 = fehlt)", min_value=0.0, max_value=1800.0,
+                    value=float(saved_references.get(str(distance),0)), step=0.1,
+                    key=key_for(f"tempo_ref_{distance}"), disabled=guest)
+        st.caption("Ein vorhandener Einzeltest aus der Wochenplanung wird für seine Strecke verwendet, solange hier keine eigene Streckenreferenz eingetragen ist. Die Zeiten werden mit dem Athletenprofil gespeichert.")
+        tempo_interpolation = st.checkbox("Zwischenstrecken als individuelle Richtwerte berechnen", value=saved_plan.get("tempo_interpolation",True), key=key_for("tempo_interp"), disabled=guest)
+        tempo_extrapolation = st.checkbox("Richtwerte über die längste Referenz hinaus zulassen (bis 800 m)", value=saved_plan.get("tempo_extrapolation",False), key=key_for("tempo_extra"), disabled=guest)
+        st.caption("Für längere Strecken mindestens eine längere Referenz ergänzen, etwa 600 oder 800 m. Die Berechnung verbindet deine Zeiten abschnittsweise. Fortsetzungen benötigen eine Referenz ab 300 m und reichen höchstens bis zur doppelten Referenzstrecke. Es handelt sich um Planungsrichtwerte.")
+    plan_settings.update({"tempo_interpolation":tempo_interpolation,"tempo_extrapolation":tempo_extrapolation})
+    points = sorted((int(d),t) for d,t in tempo_references.items() if t > 0)
+    if any(t2 <= t1 for (_,t1),(_,t2) in zip(points,points[1:])):
+        st.warning("Bitte die Referenzzeiten prüfen: Eine längere Strecke hat eine gleich kurze oder kürzere Zeit. Für den betroffenen Bereich werden keine Richtwerte interpoliert.")
+
+    if (test_seconds > 0 and tempo_references.get(str(test_distance),0) > 0
+            and not math.isclose(tempo_references[str(test_distance)],test_seconds)):
+        st.warning("Für dieselbe Strecke sind zwei Testzeiten eingetragen. Die Tempotabelle verwendet die Streckenreferenz aus ‚Testzeiten bis 800 m‘; der Einzeltest-Rechner verwendet seine eigene Eingabe. Bitte die Werte abgleichen.")
+
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
         neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="", key=key_for("neu")).strip()
         st.caption("Vor dem Athletenwechsel speichern. Ein neuer Name legt ein zusätzliches Profil mit den aktuellen Werten an.")
         if st.button("Athleten-Profil in Sektion speichern"):
             ziel_name = neuer_name if neuer_name else ziel
             try:
+                if not aktive_athleten_db and not neuer_name:
+                    raise ValueError("Bitte zuerst einen Athletennamen eingeben.")
                 if neuer_name and neuer_name in st.session_state.kader_db[aktive_kategorie]:
                     raise ValueError("Dieser Name ist bereits vorhanden. Bitte das vorhandene Profil auswählen.")
                 updated = deepcopy(st.session_state.kader_db)
                 record = deepcopy(aktuelle_daten)
                 record.update({"alter": int(alter), "groesse": float(groesse), "gewicht": float(gewicht), "profil": profil_soll,
                     "geschlecht": geschlecht_wahl, "fasertyp": ft, "reife": reife, "sbe": sbe_ziel,
-                    "t_60": float(t_60), "t_150": float(t_150), "t_150_quelle": quelle_150, "planung":plan_settings})
+                    "t_60": float(t_60), "t_150": float(t_150), "t_150_quelle": quelle_150, "planung":plan_settings, "tempo_referenzen":tempo_references})
                 updated[aktive_kategorie][ziel_name] = record
                 revision = speichere_kader_in_datei(updated, st.session_state.kader_revision)
                 st.session_state.kader_db = updated
@@ -662,44 +742,15 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("#### Eingaben und Modellwerte")
         st.write(f"60m: **{t_60:.2f} s** | 100m: **{calc_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{calc_200:.2f} s**")
     with res_col2:
-        st.info("100 m und 200 m werden mit übernommenen festen Faktoren aus der 60-m-Zeit berechnet. Eine wissenschaftlich bestätigte Entwicklungsprognose ist nicht hinterlegt.")
+        st.info("Die Übersicht zeigt die bisherigen Kurzsprint-Richtwerte. In der Tempotabelle haben deine eingetragenen Referenzzeiten Vorrang.")
 
     st.markdown("---")
-    st.subheader("Tempotabellen aus Eingaben und Modellwerten")
-
-    def format_time(seconds):
-        seconds = round(seconds, 1)
-        if seconds >= 60:
-            m = int(seconds // 60)
-            s = seconds % 60
-            return f"{m}:{s:04.1f} min"
-        return f"{seconds:.1f} s"
-
-    tempo_data = []
-    for dist_m in [50, 75, 100, 150, 200]:
-        if dist_m == 50:
-            base_s = calc_100 / 1.93
-        elif dist_m == 75:
-            base_s = calc_100 * 0.775
-        elif dist_m == 100:
-            base_s = calc_100
-        elif dist_m == 150:
-            base_s = t_150
-        elif dist_m == 200:
-            base_s = calc_200
-
-        row = {
-            "Distanz": f"{dist_m}m",
-            "Herkunft": quelle_150 if dist_m == 150 else "berechnet",
-            "100%": format_time(base_s),
-            "95%": format_time(base_s / 0.95),
-            "90%": format_time(base_s / 0.90),
-            "80%": format_time(base_s / 0.80),
-            "70%": format_time(base_s / 0.70)
-        }
-        tempo_data.append(row)
-
-    st.table(pd.DataFrame(tempo_data).set_index("Distanz"))
+    st.subheader("Tempotabellen 50–800 m")
+    st.caption("100–50 % beziehen sich auf die mittlere Geschwindigkeit der jeweiligen Referenzleistung. Beispiel: 180 s bei 100 % ergeben 225 s bei 80 %. Das sind keine Anteile der maximalen momentanen Sprintgeschwindigkeit.")
+    tempo_data = build_tempo_table(t_60,t_150,quelle_150,tempo_references,test_distance,test_seconds,tempo_interpolation,tempo_extrapolation)
+    st.dataframe(pd.DataFrame(tempo_data), hide_index=True, width="stretch", height=670)
+    if any(row["Herkunft"] == "Längere Referenz ergänzen" for row in tempo_data):
+        st.info("Für die noch leeren Strecken eine längere Referenzzeit ergänzen oder die Fortsetzung der Richtwerte aktivieren. Deine eingetragenen Referenzen haben immer Vorrang.")
 
     st.markdown("---")
     st.subheader(f"Detaillierter Trainingsplan & Doc-Athletic-Farbkodierung: {ziel}")
@@ -785,7 +836,7 @@ elif st.session_state.navigations_status == 'Operativ':
         tief_hoehe = "45-55 cm (Abstand 4-5 Fuß)"
         tief_kh = "2x 2 kg bis 2x 4 kg KH"
 
-    st.info("Planungsstand: bestätigte Trainerregeln für Einlaufen, U15-Powerbags und Wiederholungssteigerung. Übrige Lasten und die 14 Laufblöcke stammen aus 23.8 und müssen fachlich freigegeben werden.")
+    st.info("DOC-Athletik-Trainerplanung: vom Niederen zum Höheren, Links-rechts-Symmetrie und Anpassung an das Belastungsempfinden. Lasten, Umfänge und Einheitsziel vor der Anwendung individuell prüfen.")
     html_matrices = ""
 
     for te_num in te_liste:
@@ -957,7 +1008,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
         row_tl_transfer = ""
         if tl_pos in ["nach_komplex", "marathon"]:
-            row_tl_transfer = f'<tr style="background-color: #FCE4D6;"><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Lauf / Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_text}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Variabel</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Direct-Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{escape("Kurz und hochwertig" if short_day else "Vorgabe aus Altplan prüfen")}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_pause}</td></tr>'
+            row_tl_transfer = f'<tr style="background-color: #FCE4D6;"><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Lauf / Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_text}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Variabel</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Direct-Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{escape("Kurz und hochwertig" if short_day else "Individuelles Trainingsziel")}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_pause}</td></tr>'
 
         html_matrix = f'''<meta charset="utf-8">
 <div class="druck-block" style="background-color: #111111; color: #ffffff; border: 2px solid #45a29e; border-radius: 8px; padding: 20px; margin-top: 20px; font-family: Arial, sans-serif;">
@@ -1003,7 +1054,7 @@ elif st.session_state.navigations_status == 'Operativ':
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Hürden</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Hürden-Tiefsprünge (Reaktiv / DVZ)</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"Kurze Serie nach Trainerwahl" if short_day else "8–12 Hürden (Altplan)"} ({tief_hoehe})</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"Kurze Serie nach Trainerwahl" if short_day else "8–12 Hürden (Trainerbasis)"} ({tief_hoehe})</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tief_kh}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal explosiv</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3 Min. SP</td>
@@ -1011,8 +1062,8 @@ elif st.session_state.navigations_status == 'Operativ':
 <tr style="background-color: #FCE4D6;">
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Hex Bar</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Kreuzhebe-Streckung (Hex Bar / KB)</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{"3" if short_day else "3–4 (Altplan)"}</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"8–6–5 Wdh." if short_day else "8–12 Wdh. (Altplan)"}</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{"3" if short_day else "3–4 (Trainerbasis)"}</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"8–6–5 Wdh." if short_day else "8–12 Wdh. (Trainerbasis)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">{hex_text}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{pause_komplex}</td>
@@ -1030,7 +1081,7 @@ elif st.session_state.navigations_status == 'Operativ':
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Bälle</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Umsatz / Ausstoß-Jumps & Crunches</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Altplan)"}</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Trainerbasis)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Griffball {gb_last_kg} kg</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Max. Schnellkraft</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">60s</td>
@@ -1041,7 +1092,7 @@ elif st.session_state.navigations_status == 'Operativ':
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 3: Rumpf/TRX</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Zug im Schrägliegehang am TRX / Barren</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Altplan)"}</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Trainerbasis)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Körpergewicht</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Submaximal</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">60s</td>
@@ -1065,7 +1116,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.download_button(
         label="💾 Trainingsplan und Tempotabelle herunterladen",
-        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic 23.8.1 · Trainingsentwurf</h1><p>Bestätigte Trainerregeln ergänzt; als Altplan gekennzeichnete Inhalte noch prüfen. Berechnete Richtwerte sind keine gemessenen Leistungen.</p><h2>Tempotabelle</h2>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic 23.8.2 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -1075,6 +1126,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION 23.8.1</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION 23.8.2</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
