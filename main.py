@@ -1,5 +1,5 @@
 # ============================================================================
-# DOC ATHLETIC EVOLUTION - FUSSBALL & LEICHTATHLETIK (Version 23.8.2)
+# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.3)
 # Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Demo-Modus
 # ============================================================================
 
@@ -16,7 +16,7 @@ import hashlib
 import hmac
 from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Evolution 23.8.2", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.3", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -397,7 +397,7 @@ if st.session_state.get("auth_fingerprint") != auth_fingerprint:
     st.session_state.auth_fingerprint = auth_fingerprint
 
 if not TRAINER_CODE:
-    st.title("Doc Athletic Evolution 23.8.2")
+    st.title("Doc Athletic Train Smart Evolution Software 23.8.3")
     st.info("Trainerzugang einrichten: In den Streamlit-Einstellungen unter Secrets den Eintrag DOC_ATHLETIC_TRAINER_CODE mit einem eigenen Zugangscode speichern. Danach die App neu laden.")
     st.stop()
 if DATABASE_URL:
@@ -520,7 +520,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 23.8.2</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.3</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -566,6 +566,8 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.markdown("<br>", unsafe_allow_html=True)
     aktive_athleten_db = st.session_state.kader_db[aktive_kategorie]
+
+    athlete_actions = st.container()
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -706,9 +708,12 @@ elif st.session_state.navigations_status == 'Operativ':
         st.warning("Für dieselbe Strecke sind zwei Testzeiten eingetragen. Die Tempotabelle verwendet die Streckenreferenz aus ‚Testzeiten bis 800 m‘; der Einzeltest-Rechner verwendet seine eigene Eingabe. Bitte die Werte abgleichen.")
 
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
-        neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="", key=key_for("neu")).strip()
-        st.caption("Vor dem Athletenwechsel speichern. Ein neuer Name legt ein zusätzliches Profil mit den aktuellen Werten an.")
-        if st.button("Athleten-Profil in Sektion speichern"):
+        with athlete_actions:
+            st.subheader("Athletin / Athlet anlegen und speichern")
+            neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="", key=key_for("neu")).strip()
+            speichern = st.button("Athleten-Profil in Sektion speichern", type="primary")
+            st.caption("Neues Profil: Namen eingeben, unten die Werte anpassen und hier speichern. Bestehendes Profil: Namensfeld leer lassen. Vor dem Athletenwechsel speichern.")
+        if speichern:
             ziel_name = neuer_name if neuer_name else ziel
             try:
                 if not aktive_athleten_db and not neuer_name:
@@ -727,7 +732,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 st.session_state.save_notice = f"Profil {ziel_name} gespeichert."
                 st.rerun()
             except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
-                st.error(f"Nicht gespeichert: {exc}")
+                athlete_actions.error(f"Nicht gespeichert: {exc}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -836,7 +841,7 @@ elif st.session_state.navigations_status == 'Operativ':
         tief_hoehe = "45-55 cm (Abstand 4-5 Fuß)"
         tief_kh = "2x 2 kg bis 2x 4 kg KH"
 
-    st.info("DOC-Athletik-Trainerplanung: vom Niederen zum Höheren, Links-rechts-Symmetrie und Anpassung an das Belastungsempfinden. Lasten, Umfänge und Einheitsziel vor der Anwendung individuell prüfen.")
+    st.info("Doc Athletic Trainerplanung: vom Niederen zum Höheren, Links-rechts-Symmetrie und Anpassung an das Belastungsempfinden. Lasten, Umfänge und Einheitsziel vor der Anwendung individuell prüfen.")
     html_matrices = ""
 
     for te_num in te_liste:
@@ -1116,7 +1121,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.download_button(
         label="💾 Trainingsplan und Tempotabelle herunterladen",
-        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic 23.8.2 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.3 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -1126,6 +1131,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION 23.8.2</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.3</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
