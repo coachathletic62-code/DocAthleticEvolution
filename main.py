@@ -1,5 +1,5 @@
 # ============================================================================
-# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.4)
+# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.5)
 # Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Sprungtests mit Verlauf
 # ============================================================================
 
@@ -17,13 +17,29 @@ import hmac
 from datetime import date
 from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.4", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.5", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
 .stApp { background-color: #000000; color: #ffffff; }
 h1, h2, h3, h4, h5, h6, p, label { color: #ffffff !important; }
 button[title="View fullscreen"] { display: none !important; }
+
+/* Lesbare aufklappbare Überschriften in allen Bedienzuständen */
+[data-testid="stExpander"] details > summary,
+[data-testid="stExpander"] details > summary:hover,
+[data-testid="stExpander"] details > summary:focus,
+[data-testid="stExpander"] details > summary:active {
+    background-color: #17191c !important;
+    color: #ffffff !important;
+}
+[data-testid="stExpander"] details > summary * {
+    color: #ffffff !important;
+}
+[data-testid="stExpander"] details > summary:focus-visible {
+    outline: 2px solid #66fcf1 !important;
+    outline-offset: -2px;
+}
 
 /* Eingabefelder */
 .stSelectbox > div > div, .stTextInput > div > div > input, .stNumberInput > div > div > input {
@@ -433,7 +449,7 @@ if st.session_state.get("auth_fingerprint") != auth_fingerprint:
     st.session_state.auth_fingerprint = auth_fingerprint
 
 if not TRAINER_CODE:
-    st.title("Doc Athletic Train Smart Evolution Software 23.8.4")
+    st.title("Doc Athletic Train Smart Evolution Software 23.8.5")
     st.info("Trainerzugang einrichten: In den Streamlit-Einstellungen unter Secrets den Eintrag DOC_ATHLETIC_TRAINER_CODE mit einem eigenen Zugangscode speichern. Danach die App neu laden.")
     st.stop()
 if DATABASE_URL:
@@ -556,7 +572,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.4</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.5</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -1215,7 +1231,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.download_button(
         label="💾 Trainingsplan und Tempotabelle herunterladen",
-        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.4 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.5 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -1225,6 +1241,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.4</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.5</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
