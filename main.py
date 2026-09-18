@@ -1,13 +1,22 @@
 # ============================================================================
-# DOC ATHLETIC EVOLUTION - FUSSBALL & LEICHTATHLETIK (Version 23.8)
-# Update: Power Bags als Von-Bis-Korridor (bis 17 kg) & 12-15 Wdh. Front Squat Jumps
+# DOC ATHLETIC EVOLUTION - FUSSBALL & LEICHTATHLETIK (Version 23.8.1)
+# Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Demo-Modus
 # ============================================================================
 
 import streamlit as st
 import pandas as pd
 import os
+import json
+import sqlite3
+import math
+from pathlib import Path
+from copy import deepcopy
+from html import escape
+import hashlib
+import hmac
+from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Evolution 23.8", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic Evolution 23.8.1", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -112,8 +121,235 @@ def lade_bild(dateinamen_liste, use_col=False):
             return True
     return False
 
-GAST_CODE = "gast2026"
-TRAINER_CODE = "DocAthletic#2026!"
+def setting(name):
+    value = os.environ.get(name)
+    if value is not None:
+        return value
+    try:
+        return str(st.secrets.get(name, ""))
+    except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
+        return ""
+
+TRAINER_CODE = setting("DOC_ATHLETIC_TRAINER_CODE")
+GAST_CODE = setting("DOC_ATHLETIC_GAST_CODE")
+DATABASE_URL = setting("DOC_ATHLETIC_DATABASE_URL")
+DEMO_MODE = not bool(TRAINER_CODE)
+if TRAINER_CODE and GAST_CODE and TRAINER_CODE == GAST_CODE:
+    st.error("Trainer- und Gastcode müssen unterschiedlich sein.")
+    st.stop()
+
+# SQLite writes are transactional; revisions prevent stale sessions overwriting data.
+# The hosting platform must retain this directory. JSON downloads are portable backups.
+DATA_DIR = Path(os.environ.get("DOC_ATHLETIC_DATA_DIR", str(Path(__file__).resolve().parent)))
+DB_FILE = DATA_DIR / "doc_athletic.sqlite3"
+KADER_DATEI = DATA_DIR / "kader_db.json"
+VALID_PROFILES = {'Fussball_U13', 'Leichtathletik_MASTER_w', 'Fussball_U23_m', 'Fussball_U23_w', 'Fussball_MASTER_w', 'Fussball_U20_m', 'Leichtathletik_MASTER_m', 'Leichtathletik_U17_m', 'Fussball_U17_w', 'Fussball_U15_w', 'Leichtathletik_U11', 'Leichtathletik_U15', 'Leichtathletik_U17_w', 'Leichtathletik_U20_w', 'Fussball_U15_m', 'Fussball_U17_m', 'Fussball_U20_w', 'Leichtathletik_U23_w', 'Fussball_MASTER_m', 'Leichtathletik_U20_m', 'Leichtathletik_U13', 'Leichtathletik_U23_m', 'Fussball_U11'}
+DEFAULT_KADER = {
+    "Fussball": {"Demo U15 weiblich": {
+        "alter":14, "groesse":1.60, "gewicht":50.0, "profil":"Fussball_U15_w",
+        "geschlecht":"Weiblich", "fasertyp":"Gazelle", "reife":"Normalentwickler",
+        "sbe":"SR 3", "t_60":8.9}},
+    "Leichtathletik": {"Demo U17 männlich": {
+        "alter":16, "groesse":1.75, "gewicht":65.0, "profil":"Leichtathletik_U17_m",
+        "geschlecht":"Männlich", "fasertyp":"Schnelligkeit (Sprint)",
+        "reife":"Normalentwickler", "sbe":"SR 2", "t_60":7.8}}
+}
+
+
+class StorageConflict(Exception):
+    pass
+
+def validate_kader(kader):
+    if not isinstance(kader, dict) or set(kader) != {"Fussball", "Leichtathletik"}:
+        raise ValueError("Die Sicherung muss Fußball und Leichtathletik enthalten.")
+    for sport, athletes in kader.items():
+        if not isinstance(athletes, dict) or len(athletes) > 10000:
+            raise ValueError("Ungültige Athletenliste.")
+        for name, p in athletes.items():
+            if not isinstance(name, str) or not name.strip() or len(name) > 120 or name != name.strip():
+                raise ValueError("Ungültiger Athletenname.")
+            if not isinstance(p, dict):
+                raise ValueError("Ungültiges Athletenprofil.")
+            for field, low, high in [("alter",10,40),("groesse",1.30,2.15),("gewicht",30,140),("t_60",6,15)]:
+                value = p.get(field)
+                if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+                    raise ValueError(f"Ungültiger Wert im Feld {field}.")
+            if int(p["alter"]) != p["alter"]:
+                raise ValueError("Das Alter muss in ganzen Jahren angegeben sein.")
+            if p.get("profil") not in VALID_PROFILES or not p["profil"].startswith(sport + "_"):
+                raise ValueError("Trainingsprofil und Sportart passen nicht zusammen.")
+            if p.get("fasertyp") not in ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]:
+                raise ValueError("Unbekannter Fasertyp.")
+            if p.get("reife") not in ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]:
+                raise ValueError("Unbekannter Entwicklungsstatus.")
+            if not isinstance(p.get("sbe"), str) or len(p["sbe"]) > 120:
+                raise ValueError("Ungültige SBE-Angabe.")
+            if "geschlecht" in p and p["geschlecht"] not in ["Männlich", "Weiblich"]:
+                raise ValueError("Ungültige Geschlechtsangabe.")
+            if "t_150" in p:
+                v = p["t_150"]
+                if type(v) not in (int,float) or not math.isfinite(v) or not 0 < v <= 120:
+                    raise ValueError("Ungültige 150-m-Zeit.")
+            if "t_150_quelle" in p and p["t_150_quelle"] not in ["gemessen", "berechnet", "ungeklärt"]:
+                raise ValueError("Ungültige Herkunft der 150-m-Zeit.")
+            plan = p.get("planung", {})
+            if not isinstance(plan, dict):
+                raise ValueError("Ungültige Planung.")
+            ranges = {"einheiten":(1,2), "startwoche":(1,52), "bag_start":(1,20),
+                      "burpee_start":(1,30), "cheer_start":(0,30), "single_start":(0,30), "beid_start":(0,30),
+                      "bag_last":(0,30), "test_distanz":(50,1500), "test_zeit":(0,900),
+                      "test_prozent":(50,100)}
+            for key, (low, high) in ranges.items():
+                value = plan.get(key)
+                if value is not None and (type(value) not in (int,float) or not math.isfinite(value) or not low <= value <= high):
+                    raise ValueError(f"Ungültige Planung: {key}.")
+                if value is not None and key not in ("bag_last", "test_zeit") and int(value) != value:
+                    raise ValueError(f"Ganze Zahl erforderlich: {key}.")
+            for key in ("progression", "kapazitaet20", "burpees_bestaetigt"):
+                if key in plan and type(plan[key]) is not bool:
+                    raise ValueError(f"Ungültige Freigabe: {key}.")
+            if "rolle" in plan and plan["rolle"] not in ["Automatisch nach Wochenrhythmus", "Haupttag", "Neuromuskulär / vor dem Spiel"]:
+                raise ValueError("Unbekanntes Einheitsziel.")
+    return deepcopy(kader)
+
+class StorageError(Exception):
+    pass
+
+@contextmanager
+def remote_connection():
+    try:
+        import psycopg
+    except ImportError as exc:
+        raise StorageError("Für die externe Datenbank fehlt psycopg. requirements.txt aktualisieren.") from exc
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=10) as con:
+            yield con
+    except psycopg.Error as exc:
+        raise StorageError("Externe Datenbank nicht erreichbar oder nicht eingerichtet. Es wurde nicht lokal ersatzgespeichert.") from exc
+
+def remote_load():
+    with remote_connection() as con:
+        con.execute("CREATE TABLE IF NOT EXISTS doc_athletic_state (id INTEGER PRIMARY KEY CHECK(id=1), revision BIGINT NOT NULL, payload TEXT NOT NULL)")
+        con.execute("CREATE TABLE IF NOT EXISTS doc_athletic_history (revision BIGINT PRIMARY KEY, payload TEXT NOT NULL, saved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)")
+        initial = json.dumps(validate_kader(DEFAULT_KADER), ensure_ascii=False)
+        con.execute("INSERT INTO doc_athletic_state VALUES (1,0,%s) ON CONFLICT (id) DO NOTHING", (initial,))
+        row = con.execute("SELECT payload,revision FROM doc_athletic_state WHERE id=1").fetchone()
+        return validate_kader(json.loads(row[0])), row[1]
+
+def remote_save(kader, expected_revision):
+    payload = json.dumps(validate_kader(kader), ensure_ascii=False, allow_nan=False)
+    with remote_connection() as con:
+        old = con.execute("SELECT revision,payload FROM doc_athletic_state WHERE id=1 FOR UPDATE").fetchone()
+        if old is None or old[0] != expected_revision:
+            raise StorageConflict("Eine andere Sitzung hat inzwischen gespeichert. Bitte den gespeicherten Stand neu laden.")
+        con.execute("INSERT INTO doc_athletic_history(revision,payload) VALUES (%s,%s) ON CONFLICT (revision) DO NOTHING", old)
+        con.execute("UPDATE doc_athletic_state SET payload=%s,revision=revision+1 WHERE id=1", (payload,))
+    return expected_revision + 1
+
+def lade_kader_von_datei():
+    if DEMO_MODE:
+        if "demo_saved" not in st.session_state:
+            st.session_state.demo_saved = (deepcopy(DEFAULT_KADER), 0)
+        data, rev = st.session_state.demo_saved
+        return validate_kader(data), rev
+    if DATABASE_URL:
+        return remote_load()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with closing(sqlite3.connect(DB_FILE, timeout=10)) as con, con:
+        con.execute("CREATE TABLE IF NOT EXISTS state (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, payload TEXT NOT NULL)")
+        con.execute("CREATE TABLE IF NOT EXISTS history (revision INTEGER PRIMARY KEY, payload TEXT NOT NULL, saved_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+        con.execute("BEGIN IMMEDIATE")
+        row = con.execute("SELECT payload, revision FROM state WHERE id=1").fetchone()
+        if row is None:
+            if KADER_DATEI.exists():
+                with KADER_DATEI.open(encoding="utf-8") as f:
+                    initial = validate_kader(json.load(f))
+            else:
+                initial = validate_kader(DEFAULT_KADER)
+            payload = json.dumps(initial, ensure_ascii=False, allow_nan=False)
+            con.execute("INSERT INTO state VALUES (1, 0, ?)", (payload,))
+            row = (payload, 0)
+        return validate_kader(json.loads(row[0])), row[1]
+
+def speichere_kader_in_datei(kader, expected_revision):
+    validated = validate_kader(kader)
+    if DEMO_MODE:
+        _, rev = lade_kader_von_datei()
+        if rev != expected_revision:
+            raise StorageConflict("Bitte den gespeicherten Stand neu laden.")
+        st.session_state.demo_saved = (validated, rev + 1)
+        return rev + 1
+    if DATABASE_URL:
+        return remote_save(validated, expected_revision)
+    payload = json.dumps(validated, ensure_ascii=False, allow_nan=False)
+    with closing(sqlite3.connect(DB_FILE, timeout=10)) as con, con:
+        con.execute("BEGIN IMMEDIATE")
+        old = con.execute("SELECT revision, payload FROM state WHERE id=1").fetchone()
+        if old is None or old[0] != expected_revision:
+            raise StorageConflict("Eine andere Sitzung hat inzwischen gespeichert. Bitte den gespeicherten Stand neu laden und Änderungen erneut prüfen.")
+        con.execute("INSERT OR IGNORE INTO history(revision,payload) VALUES (?,?)", old)
+        con.execute("UPDATE state SET payload=?, revision=revision+1 WHERE id=1", (payload,))
+    return expected_revision + 1
+
+def warmup_text(band, te):
+    if band == "U13":
+        return "800 m ca. 3:40 min; Einstieg nach Trainerprüfung" if te >= 3 else "Einlaufen nach Trainerentscheidung; 800 m erst etwa ab TE 3"
+    return {"U15":"800 m ca. 3:30 min", "U17":"800 m unter 3:15 min",
+            "U20":"800 m unter 3:05 min", "U23":"800 m unter 2:55 min"}.get(band,
+            "Einlaufen nach Trainerentscheidung; noch keine feste Zeit hinterlegt")
+
+def weekly_reps(start, week, cap, approved):
+    return min(start + (week - 1 if approved else 0), cap)
+
+def unit_context(te, units_per_week, start_week, role):
+    week = start_week + (te - 1) // units_per_week
+    day = (te - 1) % units_per_week + 1
+    short = role == "Neuromuskulär / vor dem Spiel" or (role == "Automatisch nach Wochenrhythmus" and units_per_week == 2 and day == 2)
+    return week, day, short
+
+def cheer_load(band, gender):
+    if gender != "Weiblich":
+        return "Last je Hand individuell festlegen"
+    return {"U11":"1 kg je Hand", "U13":"2 kg je Hand", "U15":"3 kg je Hand",
+            "U17":"4 kg je Hand", "U20":"4–6 kg je Hand"}.get(band, "Last je Hand individuell festlegen")
+
+def exercise_row(exercise, sets, reps, load, note):
+    cells = ["Ergänzung", exercise, str(sets), reps, load, note, "Trainerfestlegung"]
+    return '<tr style="background:#e8f4f0">' + ''.join('<td style="padding:6px;border:1px solid #aaa">'+escape(v)+'</td>' for v in cells) + '</tr>'
+
+def profile_age(profile):
+    band = profile.split("_")[1]
+    return {"U11":10,"U13":12,"U15":14,"U17":16,"U20":19,"U23":22,"MASTER":24}[band]
+
+def widget_key(field, sport, mode, target):
+    context = json.dumps([sport,mode,target,st.session_state.get("edit_epoch",0)], ensure_ascii=False)
+    return field + "_" + hashlib.sha256(context.encode()).hexdigest()[:16]
+
+def reload_saved():
+    data, revision = lade_kader_von_datei()
+    st.session_state.kader_db = data
+    st.session_state.kader_revision = revision
+    st.session_state.edit_epoch = st.session_state.get("edit_epoch",0) + 1
+
+
+auth_fingerprint = hashlib.sha256(json.dumps([TRAINER_CODE,GAST_CODE,DATABASE_URL]).encode()).hexdigest()
+if st.session_state.get("auth_fingerprint") != auth_fingerprint:
+    st.session_state.clear()
+    st.session_state.auth_fingerprint = auth_fingerprint
+
+if DEMO_MODE:
+    st.warning("DEMO: ausschließlich Beispieldaten; Änderungen bleiben nur in dieser Sitzung. Für eigene Daten muss der Trainerzugang eingerichtet werden.")
+    if st.session_state.get("auth_modus") is None:
+        st.title("Doc Athletic Evolution 23.8.1")
+        if st.button("DEMO ÖFFNEN"):
+            st.session_state.auth_modus = "trainer"
+            st.rerun()
+        st.stop()
+else:
+    if DATABASE_URL:
+        st.caption("Speicher: externe PostgreSQL-Datenbank")
+    else:
+        st.warning("Speicher: lokale App-Datei. Auf Streamlit Cloud nicht dauerhaft garantiert. Kader regelmäßig herunterladen; externe Datenbank noch einrichten.")
 
 if 'auth_modus' not in st.session_state:
     st.session_state.auth_modus = None
@@ -127,10 +363,10 @@ if st.session_state.auth_modus is None:
         with col_p2:
             eingabe_code = st.text_input("Zugriffscode", type="password")
             if st.button("ZUGRIFF BESTÄTIGEN"):
-                if eingabe_code == TRAINER_CODE:
+                if TRAINER_CODE and hmac.compare_digest(eingabe_code.encode(), TRAINER_CODE.encode()):
                     st.session_state.auth_modus = "trainer"
                     st.rerun()
-                elif eingabe_code == GAST_CODE:
+                elif GAST_CODE and hmac.compare_digest(eingabe_code.encode(), GAST_CODE.encode()):
                     st.session_state.auth_modus = "gast"
                     st.rerun()
                 else:
@@ -142,24 +378,50 @@ if 'navigations_status' not in st.session_state:
     st.session_state.navigations_status = 'Start'
 
 if 'kader_db' not in st.session_state:
-    st.session_state.kader_db = {
-        "Fussball": {
-            "Mathilda Karnik": {"alter": 14, "groesse": 1.57, "gewicht": 46.0, "profil": "Fussball_U15_w", "fasertyp": "Gazelle", "reife": "Spätentwickler (Retardiert)", "sbe": "SR 3", "t_60": 8.90, "t_150": 21.14},
-            "Sari Saeland": {"alter": 19, "groesse": 1.58, "gewicht": 52.0, "profil": "Fussball_U20_w", "fasertyp": "Gazelle", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.00},
-            "Ronja Borchmeyer": {"alter": 20, "groesse": 1.70, "gewicht": 62.0, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.10},
-            "Svenja Poock": {"alter": 20, "groesse": 1.78, "gewicht": 67.0, "profil": "Fussball_U23_w", "fasertyp": "Kraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.30},
-            "Nora Giannori": {"alter": 22, "groesse": 1.77, "gewicht": 65.0, "profil": "Fussball_U23_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40},
-            "Mieke Schiemann": {"alter": 24, "groesse": 1.78, "gewicht": 66.0, "profil": "Fussball_MASTER_w", "fasertyp": "Ausdauer", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.50},
-            "Christoffer Danders": {"alter": 19, "groesse": 1.78, "gewicht": 74.0, "profil": "Fussball_U20_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.60}
-        },
-        "Leichtathletik": {
-            "Sprint Talent U17": {"alter": 16, "groesse": 1.75, "gewicht": 68.0, "profil": "Leichtathletik_U17_m", "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 1", "t_60": 7.30},
-            "Nachwuchs Talent U13": {"alter": 12, "groesse": 1.52, "gewicht": 42.0, "profil": "Leichtathletik_U13", "fasertyp": "Sprungkraft", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 8.40}
-        }
-    }
+    try:
+        reload_saved()
+    except (OSError, sqlite3.Error, StorageError, ValueError) as exc:
+        st.error(f"Athletendaten konnten nicht geladen werden: {exc}. Vorhandene Dateien bleiben erhalten.")
+        st.stop()
+
+if "save_notice" in st.session_state:
+    st.success(st.session_state.pop("save_notice"))
 
 def navigiere(ziel):
     st.session_state.navigations_status = ziel
+
+if st.session_state.get('auth_modus') == 'trainer':
+    st.sidebar.markdown('**Kader-Datensicherung**')
+    st.sidebar.caption("Sicherung enthält die zuletzt gespeicherten Profile einschließlich Planungseinstellungen.")
+    try:
+        backup_data, _ = lade_kader_von_datei()
+        st.sidebar.download_button('Kader sichern (Backup-Datei)',
+            data=json.dumps(backup_data, ensure_ascii=False, indent=2),
+            file_name='kader_db.json', mime='application/json')
+    except (OSError, sqlite3.Error, StorageError, ValueError):
+        st.sidebar.error("Die aktuelle Sicherung ist nicht verfügbar.")
+    st.sidebar.caption("Neu laden verwirft noch nicht gespeicherte Eingaben.")
+    if st.sidebar.button('Gespeicherten Stand neu laden'):
+        try:
+            reload_saved()
+            st.rerun()
+        except (OSError, sqlite3.Error, StorageError, ValueError) as exc:
+            st.sidebar.error(str(exc))
+    _upload = st.sidebar.file_uploader('Kader aus Backup laden', type=['json'])
+    restore_confirm = st.sidebar.checkbox('Vorhandenen Kader durch die Sicherung ersetzen')
+    if _upload is not None and st.sidebar.button('Backup jetzt wiederherstellen', disabled=not restore_confirm):
+        try:
+            if _upload.size > 5_000_000:
+                raise ValueError("Die Sicherung ist zu groß.")
+            restored = validate_kader(json.loads(_upload.getvalue()))
+            rev = speichere_kader_in_datei(restored, st.session_state.kader_revision)
+            st.session_state.kader_db = restored
+            st.session_state.kader_revision = rev
+            st.session_state.edit_epoch = st.session_state.get("edit_epoch",0) + 1
+            st.session_state.save_notice = 'Kader wiederhergestellt und gespeichert.'
+            st.rerun()
+        except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
+            st.sidebar.error(f"Wiederherstellung abgebrochen: {exc}")
 
 abc_parameter = {
     "Fussball_U11": {"sets": 3, "start_m": 12.0, "step_m": 2.0, "sbe_ziel": "SR 3"},
@@ -194,14 +456,18 @@ def snap_to_hardware(wert, hardware_liste, konservativ=True):
     passende = [h for h in hardware_liste if (h <= wert if konservativ else h >= wert)]
     if passende:
         return max(passende) if konservativ else min(passende)
-    return min(hardware_liste)
+    return None
+
+if st.sidebar.button("ABMELDEN"):
+    st.session_state.clear()
+    st.rerun()
 
 if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 23.8</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik Edition (12-15 Wdh. Front Squat & Power Bag Korridore)</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC EVOLUTION 23.8.1</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         lade_bild(["logo.png", "logo.png.png", "logo"], use_col=True)
@@ -252,34 +518,36 @@ elif st.session_state.navigations_status == 'Operativ':
         modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet / Einzelathletin", "Gruppe / Team (Kader)"])
         if modus == "Einzelathlet / Einzelathletin":
             if len(aktive_athleten_db) > 0:
-                ziel = st.selectbox("Ziel (Name)", list(aktive_athleten_db.keys()))
+                ziel = st.selectbox("Ziel (Name)", list(aktive_athleten_db.keys()), key=f"athlet_{aktive_kategorie}")
                 aktuelle_daten = aktive_athleten_db[ziel]
                 profil_soll = aktuelle_daten["profil"]
             else:
                 ziel = "Neuer Athlet"
-                aktuelle_daten = {"alter": 16, "groesse": 1.75, "gewicht": 65.0, "profil": aktive_sport_schluessel[0], "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.80}
+                aktuelle_daten = {"alter": 10, "groesse": 1.50, "gewicht": 35.0, "profil": aktive_sport_schluessel[0], "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": "SR 2", "t_60": 7.80}
                 profil_soll = aktive_sport_schluessel[0]
         else:
-            ziel = st.selectbox("Ziel (Kader / Profil)", aktive_sport_schluessel)
+            ziel = st.selectbox("Ziel (Kader / Profil)", aktive_sport_schluessel, key=f"kader_{aktive_kategorie}")
             profil_soll = ziel
-            aktuelle_daten = {"alter": 16, "groesse": 1.75, "gewicht": 65.0, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 7.80}
+            aktuelle_daten = {"alter": profile_age(ziel), "groesse": 1.50 if profile_age(ziel) <= 12 else 1.75, "gewicht": 35.0 if profile_age(ziel) <= 12 else 65.0, "fasertyp": "Schnelligkeit (Sprint)", "reife": "Normalentwickler", "sbe": abc_parameter[ziel]["sbe_ziel"], "t_60": 7.80}
+
+    key_for = lambda field: widget_key(field, aktive_kategorie, modus, ziel)
 
     with c2:
-        alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]), disabled=(st.session_state.auth_modus == "gast"))
-        geschlecht_wahl = st.selectbox("Geschlecht (Hormoneller Status)", ["Männlich", "Weiblich"], index=1 if "w" in profil_soll or "Weiblich" in str(aktuelle_daten.get("profil","")) else 0)
+        alter = st.number_input("Alter (Jahre)", min_value=10, max_value=40, value=int(aktuelle_daten["alter"]), key=key_for("alter"), disabled=(st.session_state.auth_modus == "gast" or modus == "Gruppe / Team (Kader)"))
+        geschlecht_wahl = st.selectbox("Geschlecht", ["Männlich", "Weiblich"], index=1 if aktuelle_daten.get("geschlecht", "Weiblich" if profil_soll.endswith("_w") else "Männlich") == "Weiblich" else 0, key=key_for("geschlecht"), disabled=(st.session_state.auth_modus == "gast"))
 
     with c3:
-        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten.get("groesse", 1.70)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
-        gewicht = st.number_input("Körpergewicht (kg)", min_value=30.0, max_value=140.0, value=float(aktuelle_daten.get("gewicht", 55.0)), step=0.5, disabled=(st.session_state.auth_modus == "gast"))
+        groesse = st.number_input("Körpergröße (m)", min_value=1.30, max_value=2.15, value=float(aktuelle_daten.get("groesse", 1.70)), step=0.01, key=key_for("groesse"), disabled=(st.session_state.auth_modus == "gast"))
+        gewicht = st.number_input("Körpergewicht (kg)", min_value=30.0, max_value=140.0, value=float(aktuelle_daten.get("gewicht", 55.0)), step=0.5, key=key_for("gewicht"), disabled=(st.session_state.auth_modus == "gast"))
 
     with c4:
         ft_liste = ["Ausdauer", "Kraft", "Sprungkraft", "Gazelle", "Schnelligkeit (Sprint)"]
         reife_liste = ["Spätentwickler (Retardiert)", "Normalentwickler", "Frühentwickler (Akzeleriert)"]
         ft_idx = ft_liste.index(aktuelle_daten["fasertyp"]) if aktuelle_daten["fasertyp"] in ft_liste else 4
-        ft = st.selectbox("Fasertyp", ft_liste, index=ft_idx, disabled=(st.session_state.auth_modus == "gast"))
+        ft = st.selectbox("Fasertyp", ft_liste, index=ft_idx, key=key_for("fasertyp"), disabled=(st.session_state.auth_modus == "gast"))
         reife_val = aktuelle_daten["reife"]
         r_idx = 0 if "Spät" in reife_val else 2 if "Früh" in reife_val else 1
-        reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, disabled=(st.session_state.auth_modus == "gast"))
+        reife = st.selectbox("Entwicklungsstatus", reife_liste, index=r_idx, key=key_for("reife"), disabled=(st.session_state.auth_modus == "gast"))
 
     c_opt1, c_opt2 = st.columns(2)
     with c_opt1:
@@ -287,55 +555,120 @@ elif st.session_state.navigations_status == 'Operativ':
     with c_opt2:
         jump_modus = st.selectbox("Komplex-Sprungmodus", ["Jumps (Vorfuß am Boden / Dreifachstreckung)", "Sprünge (Flugphase > 3-5 cm / Reaktiv)"])
 
-    sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], disabled=(st.session_state.auth_modus == "gast"))
+    sbe_ziel = st.text_input("SBE (Reserve)", value=aktuelle_daten["sbe"], key=key_for("sbe"), disabled=(st.session_state.auth_modus == "gast"))
 
-    if modus == "Gruppe / Team (Kader)":
-        base_prof = profil_soll.rsplit('_', 1)[0] if ('_m' in profil_soll or '_w' in profil_soll) else profil_soll
-        suffix = "_w" if geschlecht_wahl == "Weiblich" else "_m"
-        if f"{base_prof}{suffix}" in abc_parameter:
-            profil_soll = f"{base_prof}{suffix}"
+    if modus == "Einzelathlet / Einzelathletin":
+        profil_soll = st.selectbox("Trainingsprofil / Altersklasse", aktive_sport_schluessel,
+            index=aktive_sport_schluessel.index(profil_soll), key=key_for("profil"),
+            disabled=(st.session_state.auth_modus == "gast"))
+    else:
+        st.caption("Gruppenmodus: Das Alter ist ein Referenzwert der gewählten Altersklasse; Körpermaße und Testzeiten sind Beispiele und müssen angepasst werden.")
+
+    base_prof = profil_soll.rsplit('_', 1)[0] if ('_m' in profil_soll or '_w' in profil_soll) else profil_soll
+    suffix = "_w" if geschlecht_wahl == "Weiblich" else "_m"
+    if f"{base_prof}{suffix}" in abc_parameter:
+        profil_soll = f"{base_prof}{suffix}"
+
+    band = profil_soll.split("_")[1]
+    # Load prescriptions use the selected category; actual age remains separate.
+    plan_age = profile_age(profil_soll)
+    if modus == "Einzelathlet / Einzelathletin" and abs(int(alter) - plan_age) > 1:
+        st.warning("Alter und gewählte Trainingsklasse weichen ab. Die Trainingsklasse steuert den Plan; bitte prüfen.")
+    saved_plan = aktuelle_daten.get("planung", {})
+    guest = st.session_state.auth_modus == "gast"
+    with st.expander("Wochenplanung und individuelle Vorgaben", expanded=True):
+        st.caption("Trainerregeln vom 18.09.2026. Die zweite Einheit bei zwei TEs pro Woche ist im Automatikmodus neuromuskulär ausgerichtet. Einheitsziel bei Bedarf ändern.")
+        pc1, pc2 = st.columns(2)
+        with pc1:
+            einheiten = st.number_input("Einheiten pro Woche", 1, 2, int(saved_plan.get("einheiten",2)), key=key_for("einheiten"), disabled=guest)
+            startwoche = st.number_input("Startwoche für TE 1", 1, 52, int(saved_plan.get("startwoche",1)), key=key_for("startwoche"), disabled=guest)
+            roles = ["Automatisch nach Wochenrhythmus", "Haupttag", "Neuromuskulär / vor dem Spiel"]
+            role = st.selectbox("Einheitsziel", roles, index=roles.index(saved_plan.get("rolle",roles[0])), key=key_for("rolle"), disabled=guest)
+            progression = st.checkbox("Wöchentliche Steigerung nach Belastungsprüfung freigegeben", value=saved_plan.get("progression",False), key=key_for("progression"), disabled=guest)
+            bag_start = st.number_input("Powerbag: Startwiederholungen", 1, 20, int(saved_plan.get("bag_start",10)), key=key_for("bagstart"), disabled=guest)
+            capacity = st.checkbox("Individuelles Kapazitätsziel bis 20 Wiederholungen", value=saved_plan.get("kapazitaet20",False), key=key_for("capacity"), disabled=guest)
+            bag_override = st.number_input("Individuelle Powerbag-Last (kg; 0 = Korridor)", 0.0, 30.0, float(saved_plan.get("bag_last",0)), step=0.5, key=key_for("bagload"), disabled=guest)
+        with pc2:
+            burpee_start = st.number_input("Burpees: Startwiederholungen (vorläufig 8 w / 10 m)", 1, 30, int(saved_plan.get("burpee_start",8 if geschlecht_wahl=="Weiblich" else 10)), key=key_for("burpeestart_"+geschlecht_wahl), disabled=guest)
+            burpees_ok = st.checkbox("Burpee-Startwert für diesen Athleten bestätigt", value=saved_plan.get("burpees_bestaetigt",False), key=key_for("burpeeok"), disabled=guest)
+            cheer_start = st.number_input("Cheerleading: Start je Arm (0 = offen)", 0, 30, int(saved_plan.get("cheer_start",0)), key=key_for("cheerstart"), disabled=guest)
+            single_start = st.number_input("Einbeiniger Curl: Start je Bein (0 = offen)", 0, 30, int(saved_plan.get("single_start",0)), key=key_for("singlestart"), disabled=guest)
+            bilateral_start = st.number_input("Beidbeiniger Curl: Startwiederholungen (0 = offen)", 0, 30, int(saved_plan.get("beid_start",0)), key=key_for("bilatstart"), disabled=guest)
+            st.caption("Cheerleading: beidbeinige Fußgelenksprünge, Arme wechselseitig vertikal, neutraler Griff. Last gilt je Kurzhantel. Powerbar-Angaben gelten für die gesamte Stange.")
+        if bag_start > 15 and not capacity:
+            st.warning("Für mehr als 15 Powerbag-Wiederholungen das individuelle Kapazitätsziel aktivieren. Aktuell begrenzt der Plan auf 15.")
+        st.markdown("**Tempolauf aus einem Test derselben Distanz**")
+        tc1, tc2, tc3 = st.columns(3)
+        test_distance = tc1.number_input("Testdistanz (m)",50,1500,int(saved_plan.get("test_distanz",800)),key=key_for("testdist"),disabled=guest)
+        test_seconds = tc2.number_input("Gemessene Testzeit (Sekunden; 0 = fehlt)",0.0,900.0,float(saved_plan.get("test_zeit",0)),step=0.1,key=key_for("testtime"),disabled=guest)
+        test_percent = tc3.number_input("Zieltempo (% der Testgeschwindigkeit)",50,100,int(saved_plan.get("test_prozent",80)),key=key_for("testpercent"),disabled=guest)
+        st.caption("Einlaufen und Tempolauf bleiben getrennt. Keine automatische Ableitung durch Abzug von 10–15 Sekunden; keine Umrechnung dieses Tests auf andere Distanzen.")
+    plan_settings = {"einheiten":einheiten,"startwoche":startwoche,"rolle":role,"progression":progression,
+        "bag_start":bag_start,"kapazitaet20":capacity,"bag_last":bag_override,"burpee_start":burpee_start,
+        "burpees_bestaetigt":burpees_ok,"cheer_start":cheer_start,"single_start":single_start,"beid_start":bilateral_start,
+        "test_distanz":test_distance,"test_zeit":test_seconds,"test_prozent":test_percent}
 
     diag_col1, diag_col2 = st.columns(2)
     with diag_col1:
-        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.80)), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        t_60 = st.number_input("60m-Referenz (s)", min_value=6.0, max_value=15.0, value=float(aktuelle_daten.get("t_60", 7.80)), step=0.01, key=key_for("t_60"), disabled=(st.session_state.auth_modus == "gast"))
     with diag_col2:
         auto_150 = round(t_60 * 2.375, 2)
-        t_150 = st.number_input("150m-Referenz (s)", min_value=15.0, max_value=30.0, value=float(aktuelle_daten.get("t_150", auto_150) if "t_150" in aktuelle_daten else auto_150), step=0.01, disabled=(st.session_state.auth_modus == "gast"))
+        quellen = ["berechnet", "gemessen", "ungeklärt"]
+        quelle_default = aktuelle_daten.get("t_150_quelle", "ungeklärt" if "t_150" in aktuelle_daten else "berechnet")
+        quelle_150 = st.selectbox("Herkunft der 150-m-Zeit", quellen, index=quellen.index(quelle_default),
+            key=key_for("quelle150"), disabled=(st.session_state.auth_modus == "gast"))
+        if quelle_150 == "berechnet":
+            t_150 = auto_150
+            st.metric("150-m-Richtwert (berechnet)", f"{t_150:.2f} s")
+        else:
+            t_150 = st.number_input("150m-Referenz (s)", min_value=0.01, max_value=120.0,
+                value=float(aktuelle_daten.get("t_150", auto_150)), step=0.01,
+                key=key_for("t_150"), disabled=(st.session_state.auth_modus == "gast"))
+            if quelle_150 == "ungeklärt":
+                st.caption("Übernommener Wert: Bitte bestätigen, ob diese Zeit gemessen wurde.")
 
     if modus == "Einzelathlet / Einzelathletin" and st.session_state.auth_modus == "trainer":
-        neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="")
+        neuer_name = st.text_input("Neuen Athleten-Namen eingeben (zum Anlegen):", value="", key=key_for("neu")).strip()
+        st.caption("Vor dem Athletenwechsel speichern. Ein neuer Name legt ein zusätzliches Profil mit den aktuellen Werten an.")
         if st.button("Athleten-Profil in Sektion speichern"):
             ziel_name = neuer_name if neuer_name else ziel
-            st.session_state.kader_db[aktive_kategorie][ziel_name] = {
-                "alter": int(alter), "groesse": float(groesse), "gewicht": float(gewicht), "profil": profil_soll,
-                "fasertyp": ft, "reife": reife, "sbe": sbe_ziel, "t_60": float(t_60), "t_150": float(t_150)
-            }
-            st.success(f"Profil für {ziel_name} ({gewicht} kg) erfolgreich gesichert.")
-            st.rerun()
+            try:
+                if neuer_name and neuer_name in st.session_state.kader_db[aktive_kategorie]:
+                    raise ValueError("Dieser Name ist bereits vorhanden. Bitte das vorhandene Profil auswählen.")
+                updated = deepcopy(st.session_state.kader_db)
+                record = deepcopy(aktuelle_daten)
+                record.update({"alter": int(alter), "groesse": float(groesse), "gewicht": float(gewicht), "profil": profil_soll,
+                    "geschlecht": geschlecht_wahl, "fasertyp": ft, "reife": reife, "sbe": sbe_ziel,
+                    "t_60": float(t_60), "t_150": float(t_150), "t_150_quelle": quelle_150, "planung":plan_settings})
+                updated[aktive_kategorie][ziel_name] = record
+                revision = speichere_kader_in_datei(updated, st.session_state.kader_revision)
+                st.session_state.kader_db = updated
+                st.session_state.kader_revision = revision
+                st.session_state.save_notice = f"Profil {ziel_name} gespeichert."
+                st.rerun()
+            except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
+                st.error(f"Nicht gespeichert: {exc}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
     reife_intern = "Spätentwickler" if "Spät" in reife else "Frühentwickler" if "Früh" in reife else "Normalentwickler"
 
-    st.subheader("Diagnostik-Modul (Polynomische Regression)")
+    st.subheader("Testzeiten und berechnete Richtwerte")
     calc_100 = round(t_60 * 1.615, 2)
     calc_200 = round(t_60 * 3.265, 2)
 
     res_col1, res_col2 = st.columns(2)
     with res_col1:
-        st.markdown("#### Aktuelle Ist-Korrelation")
+        st.markdown("#### Eingaben und Modellwerte")
         st.write(f"60m: **{t_60:.2f} s** | 100m: **{calc_100:.2f} s** | 150m: **{t_150:.2f} s** | 200m: **{calc_200:.2f} s**")
     with res_col2:
-        st.markdown("#### 12-Monats-Entwicklungsprognose")
-        prog_faktor = 0.97 if reife == "Frühentwickler (Akzeleriert)" else 0.98
-        p_100 = calc_100 * prog_faktor
-        p_200 = calc_200 * prog_faktor
-        st.write(f"Prognose 100m: **{p_100:.2f} s** | 200m: **{p_200:.2f} s**")
+        st.info("100 m und 200 m werden mit übernommenen festen Faktoren aus der 60-m-Zeit berechnet. Eine wissenschaftlich bestätigte Entwicklungsprognose ist nicht hinterlegt.")
 
     st.markdown("---")
-    st.subheader("Tempotabellen (Echte Live-Korrelation mit 75m-Zwischenwert)")
+    st.subheader("Tempotabellen aus Eingaben und Modellwerten")
 
     def format_time(seconds):
+        seconds = round(seconds, 1)
         if seconds >= 60:
             m = int(seconds // 60)
             s = seconds % 60
@@ -357,6 +690,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
         row = {
             "Distanz": f"{dist_m}m",
+            "Herkunft": quelle_150 if dist_m == 150 else "berechnet",
             "100%": format_time(base_s),
             "95%": format_time(base_s / 0.95),
             "90%": format_time(base_s / 0.90),
@@ -376,16 +710,16 @@ elif st.session_state.navigations_status == 'Operativ':
     # ========================================================================
     # POWER BAGS: REALISTISCHE VON-BIS-KORRIDORE (BIS 17 KG) & 12-15 WDH.
     # ========================================================================
-    if int(alter) <= 13:
+    if plan_age <= 13:
         bag_text = "Power Bag 5-8 kg"
         bag_wdh = "10-12 Wdh."
-    elif int(alter) <= 15:
+    elif plan_age <= 15:
         if ft == "Gazelle" or reife_intern == "Spätentwickler":
             bag_text = "Power Bag 8-10 kg"
         else:
             bag_text = "Power Bag 10-13 kg"
         bag_wdh = "12-15 Wdh."
-    elif int(alter) <= 17:
+    elif plan_age <= 17:
         if ft == "Gazelle":
             bag_text = "Power Bag 10-13 kg"
         else:
@@ -398,60 +732,92 @@ elif st.session_state.navigations_status == 'Operativ':
             bag_text = "Power Bag 15-17 kg"
         bag_wdh = "12-15 Wdh."
 
+    if band == "U11":
+        bag_text = "Körpergewicht; keine Powerbag-Zusatzlast hinterlegt"
+    elif band == "U13":
+        bag_text = "Powerbag bis 5 kg nach Trainerfreigabe"
+    elif band == "U15":
+        bag_text = "Powerbag 8–12 kg" if geschlecht_wahl == "Weiblich" else "Powerbag 12–15 kg; bei Bedarf z. B. 10 kg"
+    if bag_override > 0:
+        bag_text = f"Powerbag {bag_override:g} kg (individuelle Trainerfestlegung)"
+
     # Griffbälle für Umsatz/Crunch
-    if int(alter) <= 13:
+    if plan_age <= 13:
         gb_last_kg = 3
-    elif int(alter) <= 15:
+    elif plan_age <= 15:
         gb_last_kg = 5 if ft in ["Kraft", "Schnelligkeit (Sprint)"] else 3
-    elif int(alter) <= 17:
+    elif plan_age <= 17:
         gb_last_kg = 7 if ft == "Kraft" else 5
     else:
         gb_last_kg = 9 if ft == "Kraft" and gewicht >= 75 else 7
 
     # Hex Bar (8-12 Wdh. beibehalten)
     ist_jumps = "Jumps" in jump_modus
-    if int(alter) <= 13:
+    if plan_age <= 13:
         hex_text = "Hex Bar nicht freigegeben (Körpergewicht)"
-    elif int(alter) <= 15:
+    elif plan_age <= 15:
         hex_kg = 30 if ft == "Kraft" else 25
         hex_text = f"Kettlebell-Paar {hex_kg} kg (Bodenkontakt)"
-    elif int(alter) <= 17:
+    elif plan_age <= 17:
         ziel_hex = gewicht * (0.55 if ist_jumps else 0.45)
         if ft == "Gazelle": ziel_hex *= 0.90
         hex_kg = snap_to_hardware(ziel_hex, HARDWARE_HEXBAR, konservativ=True)
-        hex_kg = min(hex_kg, 45 if ist_jumps else 35)
-        hex_text = f"Hex Bar {hex_kg} kg ({'Jumps' if ist_jumps else 'Sprünge'})"
+        hex_kg = min(hex_kg, 45 if ist_jumps else 35) if hex_kg is not None else None
+        hex_text = f"Hex Bar {hex_kg} kg ({'Jumps' if ist_jumps else 'Sprünge'})" if hex_kg is not None else "Keine passende Hex-Bar-Last: Trainerentscheidung erforderlich"
     else:
         ziel_hex = gewicht * (0.75 if ist_jumps else 0.60)
         if ft == "Gazelle": ziel_hex *= 0.90
         hex_kg = snap_to_hardware(ziel_hex, HARDWARE_HEXBAR, konservativ=True)
-        hex_kg = min(hex_kg, 60 if ist_jumps else 50)
-        hex_text = f"Hex Bar {hex_kg} kg ({'Jumps' if ist_jumps else 'Sprünge'})"
+        hex_kg = min(hex_kg, 60 if ist_jumps else 50) if hex_kg is not None else None
+        hex_text = f"Hex Bar {hex_kg} kg ({'Jumps' if ist_jumps else 'Sprünge'})" if hex_kg is not None else "Keine passende Hex-Bar-Last: Trainerentscheidung erforderlich"
 
     # Hürden-Tiefsprünge
-    if int(alter) <= 13:
+    if plan_age <= 13:
         tief_hoehe = "30-38 cm"
         tief_kh = "ohne ZL"
-    elif int(alter) <= 15:
+    elif plan_age <= 15:
         tief_hoehe = "38-45 cm"
         tief_kh = "ohne ZL bis 2x 1 kg KH"
-    elif int(alter) <= 17:
+    elif plan_age <= 17:
         tief_hoehe = "45 cm (Abstand 4,5 Fuß)"
         tief_kh = "2x 1 kg bis 2x 2 kg KH (Spitze 2x 3 kg)"
     else:
         tief_hoehe = "45-55 cm (Abstand 4-5 Fuß)"
         tief_kh = "2x 2 kg bis 2x 4 kg KH"
 
+    st.info("Planungsstand: bestätigte Trainerregeln für Einlaufen, U15-Powerbags und Wiederholungssteigerung. Übrige Lasten und die 14 Laufblöcke stammen aus 23.8 und müssen fachlich freigegeben werden.")
     html_matrices = ""
 
-    for woche in te_liste:
-        abc_dist = vorgaben["start_m"] + ((woche - 1) * vorgaben["step_m"])
+    for te_num in te_liste:
+        week, day, short_day = unit_context(te_num, einheiten, startwoche, role)
+        # Existing 14-block sequence is keyed to TE, never to calendar week.
+        woche = te_num
+        abc_dist = vorgaben["start_m"] + ((week - 1 if progression else 0) * vorgaben["step_m"])
+        warmup = warmup_text(band, te_num)
+        bag_count = weekly_reps(bag_start, week, 20 if capacity else 15, progression)
+        bag_wdh = "8–6–5 Wdh. (3 Sätze)" if short_day else f"{bag_count} Wdh. je Satz"
+        day_label = "Neuromuskulär / vor dem Spiel" if short_day else "Haupttag"
+        extra_rows = ""
+        if short_day:
+            extra_rows += exercise_row("Komplextransfer: Hürdensprünge / Hürden-Steigesprung / kurze Sprints", "Trainerwahl", "Kurz, technisch sauber", "Trainerfestlegung", "Neuromuskulärer Erinnerungsreiz")
+        else:
+            burpee_rep = str(weekly_reps(burpee_start,week,100,progression)) + " Wdh." if burpees_ok else "Startwert noch bestätigen"
+            extra_rows += exercise_row("Burpees / Liegestützsprünge mit Strecksprung", "Trainerwahl", burpee_rep, "Powerbar 2–3 kg gesamt: ab U15 noch bestätigen" if plan_age >= 14 else "Zusatzlast noch individuell bestätigen", "+1 Wdh./Woche bei Freigabe")
+            paired = weekly_reps(cheer_start,week,100,progression) if cheer_start else 0
+            pair_text = f"{paired} links + {paired} rechts = {paired*2} gesamt" if paired else "Start je Seite noch festlegen"
+            extra_rows += exercise_row("Cheerleading: beidbeinige Fußgelenksprünge, Arme wechselseitig", "Trainerwahl", pair_text, cheer_load(band,geschlecht_wahl), "+1 je Seite / Woche")
+            paired = weekly_reps(single_start,week,100,progression) if single_start else 0
+            pair_text = f"{paired} links + {paired} rechts = {paired*2} gesamt" if paired else "Start je Bein noch festlegen"
+            extra_rows += exercise_row("Leg Speed Curler einbeinig", "Trainerwahl", pair_text, "Trainerfestlegung", "+1 je Bein / Woche")
+            bilateral = str(weekly_reps(bilateral_start,week,100,progression)) + " Wdh." if bilateral_start else "Start noch festlegen"
+            extra_rows += exercise_row("Leg Speed Curler beidbeinig", "Trainerwahl", bilateral, "Trainerfestlegung", "+1 gemeinsame Wdh./Woche")
 
-        if int(alter) <= 13:
+
+        if plan_age <= 13:
             abc_last_str = "1,5-2,0 kg Power Bar über Kopf"
-        elif int(alter) <= 15:
+        elif plan_age <= 15:
             abc_last_str = "2,0 kg Power Bar über Kopf" if ft == "Gazelle" else "2,0-3,0 kg Power Bar über Kopf"
-        elif int(alter) <= 17:
+        elif plan_age <= 17:
             if woche in [1, 2]:
                 abc_last_str = "Ohne Stange (Fokus Bahnung/Frequenz)"
             else:
@@ -459,9 +825,9 @@ elif st.session_state.navigations_status == 'Operativ':
         else:
             abc_last_str = "2,0-3,0 kg Power Bar über Kopf" if gewicht < 70 else "3,0-4,0 kg Power Bar über Kopf"
 
-        pause_komplex = "45-60s" if geschlecht_wahl == "Weiblich" else "90s" if int(alter) <= 15 else "90-120s"
+        pause_komplex = "45-60s" if geschlecht_wahl == "Weiblich" else "90s" if plan_age <= 15 else "90-120s"
 
-        if int(alter) <= 15:
+        if plan_age <= 15:
             if woche in [1, 2]:
                 tl_pos = "nach_komplex"
                 tl_text = "6 x 100m TL (75-80%)"
@@ -499,7 +865,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 tl_text = "Abschlusstest: 60m Zeit + 250m Zeit + 600m Zeit (Maximal)"
                 tl_pause = "Volle Erholung"
 
-        elif int(alter) <= 17:
+        elif plan_age <= 17:
             if woche in [1, 2]:
                 tl_pos = "nach_komplex"
                 tl_text = "6 x 100m Technik TL (80%) [Lauf-ABC ohne Stange]"
@@ -575,15 +941,23 @@ elif st.session_state.navigations_status == 'Operativ':
                 tl_text = "Abschlusstest: 60m Sprint + 250m Sprint + 600m Test auf Zeit"
                 tl_pause = "Volle Erholung"
 
+        if short_day:
+            tl_pos = "nach_komplex"
+            tl_text = "Kurze Antritte / Sprints nach dem Komplex; Umfang individuell, kein laktazider Laufblock"
+            tl_pause = "Erholung nach Trainerfestlegung"
+        test_note = (f"Testauswertung (keine Laufvorgabe): {test_distance} m: {test_seconds / (test_percent / 100):.1f} s bei {test_percent}% der gemessenen Testgeschwindigkeit"
+                     if test_seconds > 0 else "Tempolauf-Zielzeit: Test derselben Distanz noch eingeben")
         phase_label = "Phase 1: PAP-Komplextraining" if woche <= 7 else "Phase 2: Laktazide Vorab-Ermüdung" if woche <= 11 else "Phase 3: Marathon & Zuspitzung"
         
+        if short_day:
+            phase_label = "Neuromuskulärer Erinnerungsreiz"
         row_gla_vorab = ""
         if tl_pos == "vor_komplex":
             row_gla_vorab = f'<tr style="background-color: #FCE4D6;"><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold; color: #C00000;">Block 1: GLA Vorab</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">{tl_text}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">Serie</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Kaskade vor Kraft</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">60-70% Vmax</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_pause}</td></tr>'
 
         row_tl_transfer = ""
         if tl_pos in ["nach_komplex", "marathon"]:
-            row_tl_transfer = f'<tr style="background-color: #FCE4D6;"><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Laktat/Lauf</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_text}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Variabel</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Direct-Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">55-85% Vmax</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_pause}</td></tr>'
+            row_tl_transfer = f'<tr style="background-color: #FCE4D6;"><td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 2: Lauf / Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tl_text}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Variabel</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Direct-Transfer</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{escape("Kurz und hochwertig" if short_day else "Vorgabe aus Altplan prüfen")}</td><td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{tl_pause}</td></tr>'
 
         html_matrix = f'''<meta charset="utf-8">
 <div class="druck-block" style="background-color: #111111; color: #ffffff; border: 2px solid #45a29e; border-radius: 8px; padding: 20px; margin-top: 20px; font-family: Arial, sans-serif;">
@@ -591,7 +965,8 @@ elif st.session_state.navigations_status == 'Operativ':
 <h3 style="margin: 0; color: #66fcf1 !important;">TRAININGSMATRIX - EINHEIT: TE {woche}</h3>
 <span style="color: #ffb703; font-weight: bold; font-size: 14px;">{phase_label}</span>
 </div>
-<p style="color: #ffffff !important; font-size: 14px; margin-top: 8px;"><strong>Athlet:</strong> {ziel} ({gewicht} kg) | <strong>Modus:</strong> {jump_modus} | <strong>Lauf-ABC Last:</strong> {abc_last_str}</p>
+<p style="color: #ffffff !important; font-size: 14px; margin-top: 8px;"><strong>Athlet:</strong> {escape(ziel)} ({gewicht} kg) | <strong>Woche:</strong> {week}, Einheit {day} | <strong>Ziel:</strong> {day_label} | <strong>Modus:</strong> {jump_modus} | <strong>Lauf-ABC Last:</strong> {abc_last_str}</p>
+<p>{escape(test_note)}</p>
 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #000000; border: 1px solid #7F7F7F;">
 <thead>
 <tr style="background-color: #1F4E78; color: #FFFFFF; font-weight: bold;">
@@ -607,11 +982,11 @@ elif st.session_state.navigations_status == 'Operativ':
 <tbody>
 <tr style="background-color: #FFF2CC;">
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Erwärmung</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">800m Stadionrunde (Pacing & Aktivierung)</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Einlaufen / Aktivierung</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">1</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">800m (unter 3:15 min)</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{escape(warmup)}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">–</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Zügig</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Einlaufen</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">Trinkp.</td>
 </tr>
 <tr style="background-color: #DDEBF7;">
@@ -628,7 +1003,7 @@ elif st.session_state.navigations_status == 'Operativ':
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Hürden</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Hürden-Tiefsprünge (Reaktiv / DVZ)</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">8-12 Hürden ({tief_hoehe})</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"Kurze Serie nach Trainerwahl" if short_day else "8–12 Hürden (Altplan)"} ({tief_hoehe})</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{tief_kh}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal explosiv</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3 Min. SP</td>
@@ -636,8 +1011,8 @@ elif st.session_state.navigations_status == 'Operativ':
 <tr style="background-color: #FCE4D6;">
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Hex Bar</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Kreuzhebe-Streckung (Hex Bar / KB)</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3-4</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">8-12 Wdh.</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{"3" if short_day else "3–4 (Altplan)"}</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"8–6–5 Wdh." if short_day else "8–12 Wdh. (Altplan)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">{hex_text}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Maximal</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">{pause_komplex}</td>
@@ -655,17 +1030,18 @@ elif st.session_state.navigations_status == 'Operativ':
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Komplex: Bälle</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Umsatz / Ausstoß-Jumps & Crunches</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">12-15 Wdh.</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Altplan)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Griffball {gb_last_kg} kg</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Max. Schnellkraft</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">60s</td>
 </tr>
 {row_tl_transfer}
+{extra_rows}
 <tr style="background-color: #E2EFDA;">
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; font-weight: bold;">Block 3: Rumpf/TRX</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Zug im Schrägliegehang am TRX / Barren</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">3</td>
-<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">12-15 Wdh.</td>
+<td style="padding: 6px 8px; border: 1px solid #D9D9D9;">{"5–8 Wdh." if short_day else "12–15 Wdh. (Altplan)"}</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Körpergewicht</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9;">Submaximal</td>
 <td style="padding: 6px 8px; border: 1px solid #D9D9D9; text-align: center;">60s</td>
@@ -688,8 +1064,8 @@ elif st.session_state.navigations_status == 'Operativ':
     st.markdown("---")
 
     st.download_button(
-        label="💾 Trainingsplan als HTML direkt im Download-Ordner speichern",
-        data=html_matrices,
+        label="💾 Trainingsplan und Tempotabelle herunterladen",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic 23.8.1 · Trainingsentwurf</h1><p>Bestätigte Trainerregeln ergänzt; als Altplan gekennzeichnete Inhalte noch prüfen. Berechnete Richtwerte sind keine gemessenen Leistungen.</p><h2>Tempotabelle</h2>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -699,6 +1075,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION 23.8</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC EVOLUTION 23.8.1</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
