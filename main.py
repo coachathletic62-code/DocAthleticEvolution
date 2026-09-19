@@ -1,6 +1,7 @@
 # ============================================================================
-# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 23.8.5)
-# Stand 18.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Sprungtests mit Verlauf
+# DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE - FUSSBALL & LEICHTATHLETIK (Version 30.5.0)
+# ChatGPT überarbeitet auf Grundlage 23.8.5; Modul 1
+# Stand 19.09.2026: Wochensteuerung, Trainerregeln, geprüfte Speicherung, Sprungtests mit Verlauf
 # ============================================================================
 
 import streamlit as st
@@ -17,7 +18,7 @@ import hmac
 from datetime import date
 from contextlib import contextmanager, closing
 
-st.set_page_config(page_title="Doc Athletic Train Smart Evolution Software 23.8.5", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Doc Athletic – Modul 1 · 30.5.0", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -68,7 +69,38 @@ div.stDownloadButton > button span {
     font-size: 15px !important;
 }
 
-/* Peppiges High-Performance Steuerungs-Panel */
+
+/* 30.5.0: explizite Kontraste auch für Notizen, Formularbuttons und Sidebar. */
+[data-testid="stSidebar"] { background-color: #17191c !important; color: #ffffff !important; }
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stDateInput"] input,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    caret-color: #111111 !important;
+}
+[data-testid="stSelectbox"] [data-baseweb="select"] span,
+[data-testid="stSelectbox"] [data-baseweb="select"] input,
+[data-baseweb="popover"] [role="option"] {
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+}
+[data-baseweb="popover"] [role="listbox"] { background-color: #ffffff !important; }
+[data-testid="stButton"] button,
+[data-testid="stFormSubmitButton"] button {
+    background-color: #1f2833 !important;
+    color: #ffffff !important;
+    border: 2px solid #45a29e !important;
+}
+[data-testid="stButton"] button *,
+[data-testid="stFormSubmitButton"] button * { color: #ffffff !important; }
+[data-testid="stButton"] button:focus-visible,
+[data-testid="stFormSubmitButton"] button:focus-visible { outline: 3px solid #66fcf1 !important; }
+
+/* Steuerungs-Panel */
 .steuermatrix {
     background: linear-gradient(145deg, #10161d, #07090c);
     border: 2px solid #66fcf1;
@@ -301,6 +333,8 @@ def validate_kader(kader):
                 raise ValueError("Ungültige SBE-Angabe.")
             if "geschlecht" in p and p["geschlecht"] not in ["Männlich", "Weiblich"]:
                 raise ValueError("Ungültige Geschlechtsangabe.")
+            if not isinstance(p.get("notizen", ""), str) or len(p.get("notizen", "")) > 4000:
+                raise ValueError("Profilnotizen dürfen höchstens 4000 Zeichen enthalten.")
             if "t_150" in p:
                 v = p["t_150"]
                 if type(v) not in (int,float) or not math.isfinite(v) or not 0 < v <= 120:
@@ -432,6 +466,14 @@ def profile_age(profile):
     band = profile.split("_")[1]
     return {"U11":10,"U13":12,"U15":14,"U17":16,"U20":19,"U23":22,"MASTER":24}[band]
 
+def age_matches_profile(age, profile):
+    # Ganze Lebensjahre; Trainer dürfen bewusst ein anderes Trainingsprofil wählen.
+    band = profile.split("_")[1]
+    ranges = {"U11": (9, 10), "U13": (11, 12), "U15": (13, 14),
+              "U17": (15, 16), "U20": (17, 19), "U23": (20, 22), "MASTER": (23, 40)}
+    low, high = ranges[band]
+    return low <= age <= high
+
 def widget_key(field, sport, mode, target):
     context = json.dumps([sport,mode,target,st.session_state.get("edit_epoch",0)], ensure_ascii=False)
     return field + "_" + hashlib.sha256(context.encode()).hexdigest()[:16]
@@ -449,7 +491,7 @@ if st.session_state.get("auth_fingerprint") != auth_fingerprint:
     st.session_state.auth_fingerprint = auth_fingerprint
 
 if not TRAINER_CODE:
-    st.title("Doc Athletic Train Smart Evolution Software 23.8.5")
+    st.title("Doc Athletic Train Smart Evolution Software 30.5.0")
     st.info("Trainerzugang einrichten: In den Streamlit-Einstellungen unter Secrets den Eintrag DOC_ATHLETIC_TRAINER_CODE mit einem eigenen Zugangscode speichern. Danach die App neu laden.")
     st.stop()
 if DATABASE_URL:
@@ -572,7 +614,7 @@ if st.session_state.auth_modus == "gast":
     st.sidebar.warning("GAST-MODUS (Nur Leserechte)")
 
 if st.session_state.navigations_status == 'Start':
-    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.5</h1><p style='text-align:center'>Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #66fcf1 !important; margin-top: 30px;'>DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 30.5.0</h1><p style='text-align:center'>Modul 1 · ChatGPT überarbeitet · Tempotabellen bis 800 m</p>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #c5c6c7; font-size: 16px;'>Fußball & Leichtathletik · Individuelle Trainingsplanung</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -622,6 +664,9 @@ elif st.session_state.navigations_status == 'Operativ':
     athlete_actions = st.container()
     jump_area = st.container()
 
+    pending = st.session_state.pop("pending_athlete_selection", None)
+    if pending and pending[0] == aktive_kategorie and pending[1] in aktive_athleten_db:
+        st.session_state[f"athlet_{aktive_kategorie}"] = pending[1]
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         modus = st.selectbox("Steuerungs-Ebene", ["Einzelathlet / Einzelathletin", "Gruppe / Team (Kader)"])
@@ -679,9 +724,11 @@ elif st.session_state.navigations_status == 'Operativ':
         profil_soll = f"{base_prof}{suffix}"
 
     band = profil_soll.split("_")[1]
+    profile_notes = st.text_area("Individuelle Profilnotizen", value=aktuelle_daten.get("notizen", ""),
+        max_chars=4000, key=key_for("profilnotizen"), disabled=(st.session_state.auth_modus == "gast"))
     # Load prescriptions use the selected category; actual age remains separate.
     plan_age = profile_age(profil_soll)
-    if modus == "Einzelathlet / Einzelathletin" and abs(int(alter) - plan_age) > 1:
+    if modus == "Einzelathlet / Einzelathletin" and not age_matches_profile(int(alter), profil_soll):
         st.warning("Alter und gewählte Trainingsklasse weichen ab. Die Trainingsklasse steuert den Plan; bitte prüfen.")
     saved_plan = aktuelle_daten.get("planung", {})
     guest = st.session_state.auth_modus == "gast"
@@ -778,13 +825,15 @@ elif st.session_state.navigations_status == 'Operativ':
                 if neuer_name:
                     record.pop("sprungtests", None)
                 record.update({"alter": int(alter), "groesse": float(groesse), "gewicht": float(gewicht), "profil": profil_soll,
-                    "geschlecht": geschlecht_wahl, "fasertyp": ft, "reife": reife, "sbe": sbe_ziel,
+                    "geschlecht": geschlecht_wahl, "fasertyp": ft, "reife": reife, "sbe": sbe_ziel, "notizen": profile_notes,
                     "t_60": float(t_60), "t_150": float(t_150), "t_150_quelle": quelle_150, "planung":plan_settings, "tempo_referenzen":tempo_references})
                 updated[aktive_kategorie][ziel_name] = record
                 revision = speichere_kader_in_datei(updated, st.session_state.kader_revision)
                 st.session_state.kader_db = updated
                 st.session_state.kader_revision = revision
-                st.session_state.save_notice = f"Profil {ziel_name} gespeichert."
+                st.session_state.pending_athlete_selection = (aktive_kategorie, ziel_name)
+                st.session_state.edit_epoch = st.session_state.get("edit_epoch", 0) + 1
+                st.session_state.save_notice = f"Profil {ziel_name} gespeichert und zur Bearbeitung ausgewählt."
                 st.rerun()
             except (OSError, sqlite3.Error, StorageError, ValueError, StorageConflict) as exc:
                 athlete_actions.error(f"Nicht gespeichert: {exc}")
@@ -1076,7 +1125,7 @@ elif st.session_state.navigations_status == 'Operativ':
                 tl_pause = "50-100m Gehpause"
             elif woche in [3, 4]:
                 tl_pos = "nach_komplex"
-                tl_text = "Direct-PAP: 2x 150m Sprint (>85%) + 1x 350m (>70%) + 1x 550m (70%)"
+                tl_text = "Komplextransfer: 2x 150m Sprint (>85%) + 1x 350m (>70%) + 1x 550m (70%)"
                 tl_pause = "100m Gehpause"
             elif woche in [5, 6]:
                 tl_pos = "nach_komplex"
@@ -1113,7 +1162,7 @@ elif st.session_state.navigations_status == 'Operativ':
             tl_pause = "Erholung nach Trainerfestlegung"
         test_note = (f"Testauswertung (keine Laufvorgabe): {test_distance} m: {test_seconds / (test_percent / 100):.1f} s bei {test_percent}% der gemessenen Testgeschwindigkeit"
                      if test_seconds > 0 else "Tempolauf-Zielzeit: Test derselben Distanz noch eingeben")
-        phase_label = "Phase 1: PAP-Komplextraining" if woche <= 7 else "Phase 2: Laktazide Vorab-Ermüdung" if woche <= 11 else "Phase 3: Marathon & Zuspitzung"
+        phase_label = "Phase 1: Komplextraining: Kraft und anschließende Sprünge/Sprints" if woche <= 7 else "Phase 2: Laktazide Vorab-Ermüdung" if woche <= 11 else "Phase 3: Marathon & Zuspitzung"
         
         if short_day:
             phase_label = "Neuromuskulärer Erinnerungsreiz"
@@ -1231,7 +1280,7 @@ elif st.session_state.navigations_status == 'Operativ':
 
     st.download_button(
         label="💾 Trainingsplan und Tempotabelle herunterladen",
-        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 23.8.5 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
+        data="<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Doc Athletic Train Smart Evolution Software – Trainingsplan</title><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}th,td{padding:6px;border:1px solid #aaa}@media print{@page{size:A4 landscape;margin:10mm}.druck-block{break-before:page}}</style></head><body>" + "<h1>Doc Athletic Train Smart Evolution Software 30.5.0 · Trainingsentwurf</h1><p>Trainerplanung nach individuellen Referenzen und Belastungsverträglichkeit. Berechnete Richtwerte sind Orientierungshilfen.</p><h2>Tempotabelle 50–800 m</h2><p>Prozentwerte der mittleren Referenzgeschwindigkeit. Zwischenwerte und ausdrücklich aktivierte Fortsetzungen sind als Richtwerte gekennzeichnet. Einlaufzeiten bleiben separat.</p>" + pd.DataFrame(tempo_data).to_html(index=False, escape=True) + html_matrices + "</body></html>",
         file_name=f"Doc_Athletic_Trainingsplan_{ziel.replace(' ', '_')}.html",
         mime="text/html; charset=utf-8"
     )
@@ -1241,6 +1290,6 @@ elif st.session_state.navigations_status == 'Operativ':
         st.markdown("""<div style="text-align: center; border: 2px solid #45a29e; border-radius: 8px; padding: 15px; background-color: #111111;">
 <h2 style="color: #66fcf1 !important; margin-bottom: 5px; font-family: Arial, sans-serif;">Aufgeben gilt nicht!</h2>
 <p style="color: #ffb703 !important; font-size: 16px; font-weight: bold; margin: 8px 0;">>>Das, was du fühlst, ist nicht das, was du kannst.<<</p>
-<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 23.8.5</p>
+<p style="color: #ffffff !important; font-size: 13px; letter-spacing: 1px; margin-top: 5px;">DOC ATHLETIC TRAIN SMART EVOLUTION SOFTWARE 30.5.0</p>
 </div>""", unsafe_allow_html=True)
         lade_bild(["Foto.jpg", "Foto.JPG", "foto.jpg", "foto.JPG", "Foto.jpeg", "foto.jpeg", "Foto.png", "foto.png"], use_col=True)
